@@ -23,8 +23,7 @@ func (s *MemoryStore) CreateQuote(ctx context.Context, quote Quote) error {
 	}
 	s.ids = append(s.ids, quote.ID)
 	s.quotes[quote.ID] = quote
-	s.quotes[quote.ID].Validate()
-	return nil
+	return s.quotes[quote.ID].Validate()
 }
 
 func (s *MemoryStore) ListQuotes(ctx context.Context) ([]Quote, error) {
@@ -81,8 +80,7 @@ func (s *MemoryStore) UpdateQuote(ctx context.Context, quote Quote) error {
 	}
 
 	s.quotes[quote.ID] = quote
-	s.quotes[quote.ID].Validate()
-	return nil
+	return s.quotes[quote.ID].Validate()
 }
 
 // O(n). Expensive to delete, but we don't expect this to be a common operation.
