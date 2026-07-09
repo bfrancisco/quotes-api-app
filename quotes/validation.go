@@ -10,6 +10,10 @@ func (q Quote) Validate() error {
 		return errors.New("quote ID cannot be empty")
 	}
 
+	if !isNumeric(q.ID) {
+		return errors.New("quote ID should be numeric")
+	}
+
 	if isEmptyString(q.Text) {
 		return errors.New("quote text cannot be empty")
 	}
