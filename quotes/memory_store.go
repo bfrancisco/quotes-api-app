@@ -18,10 +18,12 @@ func NewMemoryStore() *MemoryStore {
 }
 
 func (s *MemoryStore) CreateQuote(ctx context.Context, quote Quote) error {
-	if _, exists := s.quotes[quote.ID]; !exists {
-		s.ids = append(s.ids, quote.ID)
+	if _, exists := s.quotes[quote.ID]; exists {
+		return ErrQuoteAlreadyExists
 	}
+	s.ids = append(s.ids, quote.ID)
 	s.quotes[quote.ID] = quote
+	s.quotes[quote.ID].Validate()
 	return nil
 }
 
@@ -79,6 +81,7 @@ func (s *MemoryStore) UpdateQuote(ctx context.Context, quote Quote) error {
 	}
 
 	s.quotes[quote.ID] = quote
+	s.quotes[quote.ID].Validate()
 	return nil
 }
 

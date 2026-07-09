@@ -1,33 +1,25 @@
 package quotes
 
 import (
-	"errors"
 	"time"
 )
 
+// Call after Create and Update operations.
 func (q Quote) Validate() error {
-	if isEmptyString(q.ID) {
-		return errors.New("quote ID cannot be empty")
-	}
-
-	if !isNumeric(q.ID) {
-		return errors.New("quote ID should be numeric")
+	if isEmptyString(q.ID) || !isNumeric(q.ID) {
+		return ErrInvalidQuoteID
 	}
 
 	if isEmptyString(q.Text) {
-		return errors.New("quote text cannot be empty")
+		return ErrInvalidQuoteText
 	}
 
 	if isEmptyString(q.Author) {
-		return errors.New("quote author cannot be empty")
+		return ErrInvalidQuoteAuthor
 	}
 
-	if q.CreatedAt.IsZero() {
-		return errors.New("quote creation date cannot be empty")
-	}
-
-	if q.CreatedAt.After(time.Now()) {
-		return errors.New("quote creation date cannot be in the future")
+	if q.CreatedAt.IsZero() || q.CreatedAt.After(time.Now()) {
+		return ErrInvalidCreateTime
 	}
 
 	return nil
