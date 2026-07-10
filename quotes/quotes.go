@@ -16,6 +16,6 @@ type QuoteCreateInput struct {
 
 type QuoteUpdateInput struct {
 	ID     string
-	Text   string
-	Author string
+	Text   *string
+	Author *string
 }

@@ -6,6 +6,10 @@ import (
 	"testing"
 )
 
+func memoryStoreStringPtr(value string) *string {
+	return &value
+}
+
 func validCreateInput(author string) QuoteCreateInput {
 	return QuoteCreateInput{
 		Text:   "Simplicity is prerequisite for reliability.",
@@ -121,8 +125,8 @@ func TestMemoryStoreUpdateQuote(t *testing.T) {
 
 	updated := QuoteUpdateInput{
 		ID:     "1",
-		Text:   "Updated text",
-		Author: "Author B",
+		Text:   memoryStoreStringPtr("Updated text"),
+		Author: memoryStoreStringPtr("Author B"),
 	}
 
 	if err := store.UpdateQuote(ctx, updated); err != nil {
@@ -145,11 +149,118 @@ func TestMemoryStoreUpdateQuoteNotFound(t *testing.T) {
 
 	err := store.UpdateQuote(ctx, QuoteUpdateInput{
 		ID:     "404",
-		Text:   "Simplicity is prerequisite for reliability.",
-		Author: "Missing",
+		Text:   memoryStoreStringPtr("Simplicity is prerequisite for reliability."),
+		Author: memoryStoreStringPtr("Missing"),
 	})
 	if !errors.Is(err, ErrQuoteNotFound) {
 		t.Fatalf("UpdateQuote() error = %v, want %v", err, ErrQuoteNotFound)
+	}
+}
+
+func TestMemoryStoreUpdateQuoteTextOnly(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+
+	if err := store.CreateQuote(ctx, validCreateInput("Author A")); err != nil {
+		t.Fatalf("CreateQuote() error = %v, want nil", err)
+	}
+
+	err := store.UpdateQuote(ctx, QuoteUpdateInput{
+		ID:   "1",
+		Text: memoryStoreStringPtr("Updated text only"),
+	})
+	if err != nil {
+		t.Fatalf("UpdateQuote() error = %v, want nil", err)
+	}
+
+	got, err := store.GetQuoteByID(ctx, "1")
+	if err != nil {
+		t.Fatalf("GetQuoteByID() error = %v, want nil", err)
+	}
+
+	if got.Text != "Updated text only" {
+		t.Fatalf("Updated quote text = %q, want %q", got.Text, "Updated text only")
+	}
+	if got.Author != "Author A" {
+		t.Fatalf("Updated quote author = %q, want %q", got.Author, "Author A")
+	}
+}
+
+func TestMemoryStoreUpdateQuoteAuthorOnly(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+
+	if err := store.CreateQuote(ctx, validCreateInput("Author A")); err != nil {
+		t.Fatalf("CreateQuote() error = %v, want nil", err)
+	}
+
+	err := store.UpdateQuote(ctx, QuoteUpdateInput{
+		ID:     "1",
+		Author: memoryStoreStringPtr("Author B"),
+	})
+	if err != nil {
+		t.Fatalf("UpdateQuote() error = %v, want nil", err)
+	}
+
+	got, err := store.GetQuoteByID(ctx, "1")
+	if err != nil {
+		t.Fatalf("GetQuoteByID() error = %v, want nil", err)
+	}
+
+	if got.Author != "Author B" {
+		t.Fatalf("Updated quote author = %q, want %q", got.Author, "Author B")
+	}
+	if got.Text != "Simplicity is prerequisite for reliability." {
+		t.Fatalf("Updated quote text = %q, want %q", got.Text, "Simplicity is prerequisite for reliability.")
+	}
+}
+
+func TestMemoryStoreUpdateQuoteNoFieldsToUpdate(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+
+	if err := store.CreateQuote(ctx, validCreateInput("Author A")); err != nil {
+		t.Fatalf("CreateQuote() error = %v, want nil", err)
+	}
+
+	err := store.UpdateQuote(ctx, QuoteUpdateInput{ID: "1"})
+	if !errors.Is(err, ErrNoFieldsToUpdate) {
+		t.Fatalf("UpdateQuote() error = %v, want %v", err, ErrNoFieldsToUpdate)
+	}
+
+	got, err := store.GetQuoteByID(ctx, "1")
+	if err != nil {
+		t.Fatalf("GetQuoteByID() error = %v, want nil", err)
+	}
+
+	if got.Author != "Author A" || got.Text != "Simplicity is prerequisite for reliability." {
+		t.Fatalf("Quote changed after no-op update = %+v", got)
+	}
+}
+
+func TestMemoryStoreUpdateQuoteInvalidFieldDoesNotPersist(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+
+	if err := store.CreateQuote(ctx, validCreateInput("Author A")); err != nil {
+		t.Fatalf("CreateQuote() error = %v, want nil", err)
+	}
+
+	err := store.UpdateQuote(ctx, QuoteUpdateInput{
+		ID:   "1",
+		Text: memoryStoreStringPtr(" "),
+	})
+	if !errors.Is(err, ErrInvalidQuoteText) {
+		t.Fatalf("UpdateQuote() error = %v, want %v", err, ErrInvalidQuoteText)
+	}
+
+	got, err := store.GetQuoteByID(ctx, "1")
+	if err != nil {
+		t.Fatalf("GetQuoteByID() error = %v, want nil", err)
+	}
+
+	if got.Author != "Author A" || got.Text != "Simplicity is prerequisite for reliability." {
+		t.Fatalf("Quote changed after invalid update = %+v", got)
 	}
 }
 

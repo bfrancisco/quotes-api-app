@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+func validationStringPtr(value string) *string {
+	return &value
+}
+
 func TestQuoteValidate(t *testing.T) {
 	t.Parallel()
 
@@ -171,16 +175,30 @@ func TestQuoteUpdateInputValidate(t *testing.T) {
 			name: "valid update input",
 			input: QuoteUpdateInput{
 				ID:     "1",
-				Text:   "Simplicity is prerequisite for reliability.",
-				Author: "Edsger W. Dijkstra",
+				Text:   validationStringPtr("Simplicity is prerequisite for reliability."),
+				Author: validationStringPtr("Edsger W. Dijkstra"),
+			},
+		},
+		{
+			name: "valid update input with text only",
+			input: QuoteUpdateInput{
+				ID:   "1",
+				Text: validationStringPtr("Simplicity is prerequisite for reliability."),
+			},
+		},
+		{
+			name: "valid update input with author only",
+			input: QuoteUpdateInput{
+				ID:     "1",
+				Author: validationStringPtr("Edsger W. Dijkstra"),
 			},
 		},
 		{
 			name: "empty id",
 			input: QuoteUpdateInput{
 				ID:     " ",
-				Text:   "Simplicity is prerequisite for reliability.",
-				Author: "Edsger W. Dijkstra",
+				Text:   validationStringPtr("Simplicity is prerequisite for reliability."),
+				Author: validationStringPtr("Edsger W. Dijkstra"),
 			},
 			wantErr: ErrInvalidQuoteID,
 		},
@@ -188,17 +206,24 @@ func TestQuoteUpdateInputValidate(t *testing.T) {
 			name: "non numeric id",
 			input: QuoteUpdateInput{
 				ID:     "abc",
-				Text:   "Simplicity is prerequisite for reliability.",
-				Author: "Edsger W. Dijkstra",
+				Text:   validationStringPtr("Simplicity is prerequisite for reliability."),
+				Author: validationStringPtr("Edsger W. Dijkstra"),
 			},
 			wantErr: ErrInvalidQuoteID,
+		},
+		{
+			name: "no fields to update",
+			input: QuoteUpdateInput{
+				ID: "1",
+			},
+			wantErr: ErrNoFieldsToUpdate,
 		},
 		{
 			name: "empty text",
 			input: QuoteUpdateInput{
 				ID:     "1",
-				Text:   " ",
-				Author: "Edsger W. Dijkstra",
+				Text:   validationStringPtr(" "),
+				Author: validationStringPtr("Edsger W. Dijkstra"),
 			},
 			wantErr: ErrInvalidQuoteText,
 		},
@@ -206,8 +231,8 @@ func TestQuoteUpdateInputValidate(t *testing.T) {
 			name: "empty author",
 			input: QuoteUpdateInput{
 				ID:     "1",
-				Text:   "Simplicity is prerequisite for reliability.",
-				Author: " ",
+				Text:   validationStringPtr("Simplicity is prerequisite for reliability."),
+				Author: validationStringPtr(" "),
 			},
 			wantErr: ErrInvalidQuoteAuthor,
 		},

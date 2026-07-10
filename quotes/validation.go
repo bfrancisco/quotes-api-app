@@ -41,11 +41,15 @@ func (q QuoteUpdateInput) Validate() error {
 		return ErrInvalidQuoteID
 	}
 
-	if isEmptyString(q.Text) {
+	if q.Text == nil && q.Author == nil {
+		return ErrNoFieldsToUpdate
+	}
+
+	if q.Text != nil && isEmptyString(*q.Text) {
 		return ErrInvalidQuoteText
 	}
 
-	if isEmptyString(q.Author) {
+	if q.Author != nil && isEmptyString(*q.Author) {
 		return ErrInvalidQuoteAuthor
 	}
 

@@ -88,15 +88,28 @@ func (s *MemoryStore) GetRandomQuote(ctx context.Context) (Quote, error) {
 
 // O(1)
 func (s *MemoryStore) UpdateQuote(ctx context.Context, quote QuoteUpdateInput) error {
+	if err := quote.Validate(); err != nil {
+		return err
+	}
+
 	if _, ok := s.quotes[quote.ID]; !ok {
 		return ErrQuoteNotFound
 	}
 
 	updatedQuote := s.quotes[quote.ID]
-	updatedQuote.Text = quote.Text
-	updatedQuote.Author = quote.Author
+	if quote.Text != nil {
+		updatedQuote.Text = *quote.Text
+	}
+	if quote.Author != nil {
+		updatedQuote.Author = *quote.Author
+	}
+
+	if err := updatedQuote.Validate(); err != nil {
+		return err
+	}
+
 	s.quotes[quote.ID] = updatedQuote
-	return s.quotes[quote.ID].Validate()
+	return nil
 }
 
 // O(n). Expensive to delete, but we don't expect this to be a common operation.
