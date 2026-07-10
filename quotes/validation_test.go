@@ -105,3 +105,130 @@ func TestQuoteValidate(t *testing.T) {
 		})
 	}
 }
+
+func TestQuoteCreateInputValidate(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		input   QuoteCreateInput
+		wantErr error
+	}{
+		{
+			name: "valid create input",
+			input: QuoteCreateInput{
+				Text:   "Simplicity is prerequisite for reliability.",
+				Author: "Edsger W. Dijkstra",
+			},
+		},
+		{
+			name: "empty text",
+			input: QuoteCreateInput{
+				Text:   " ",
+				Author: "Edsger W. Dijkstra",
+			},
+			wantErr: ErrInvalidQuoteText,
+		},
+		{
+			name: "empty author",
+			input: QuoteCreateInput{
+				Text:   "Simplicity is prerequisite for reliability.",
+				Author: " ",
+			},
+			wantErr: ErrInvalidQuoteAuthor,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := test.input.Validate()
+			if test.wantErr == nil {
+				if err != nil {
+					t.Fatalf("Validate() error = %v, want nil", err)
+				}
+				return
+			}
+
+			if !errors.Is(err, test.wantErr) {
+				t.Fatalf("Validate() error = %v, want %v", err, test.wantErr)
+			}
+		})
+	}
+}
+
+func TestQuoteUpdateInputValidate(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		input   QuoteUpdateInput
+		wantErr error
+	}{
+		{
+			name: "valid update input",
+			input: QuoteUpdateInput{
+				ID:     "1",
+				Text:   "Simplicity is prerequisite for reliability.",
+				Author: "Edsger W. Dijkstra",
+			},
+		},
+		{
+			name: "empty id",
+			input: QuoteUpdateInput{
+				ID:     " ",
+				Text:   "Simplicity is prerequisite for reliability.",
+				Author: "Edsger W. Dijkstra",
+			},
+			wantErr: ErrInvalidQuoteID,
+		},
+		{
+			name: "non numeric id",
+			input: QuoteUpdateInput{
+				ID:     "abc",
+				Text:   "Simplicity is prerequisite for reliability.",
+				Author: "Edsger W. Dijkstra",
+			},
+			wantErr: ErrInvalidQuoteID,
+		},
+		{
+			name: "empty text",
+			input: QuoteUpdateInput{
+				ID:     "1",
+				Text:   " ",
+				Author: "Edsger W. Dijkstra",
+			},
+			wantErr: ErrInvalidQuoteText,
+		},
+		{
+			name: "empty author",
+			input: QuoteUpdateInput{
+				ID:     "1",
+				Text:   "Simplicity is prerequisite for reliability.",
+				Author: " ",
+			},
+			wantErr: ErrInvalidQuoteAuthor,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := test.input.Validate()
+			if test.wantErr == nil {
+				if err != nil {
+					t.Fatalf("Validate() error = %v, want nil", err)
+				}
+				return
+			}
+
+			if !errors.Is(err, test.wantErr) {
+				t.Fatalf("Validate() error = %v, want %v", err, test.wantErr)
+			}
+		})
+	}
+}
