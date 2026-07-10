@@ -2,28 +2,40 @@ package quotes
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
+	"time"
 )
 
 type MemoryStore struct {
 	quotes map[string]Quote
 	ids    []string // used to store the order of quote IDs for random selection.
+	maxID  int
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
 		quotes: make(map[string]Quote),
 		ids:    make([]string, 0),
+		maxID:  0, // first quote will have ID "1". Doesn't decrement on delete.
 	}
 }
 
-func (s *MemoryStore) CreateQuote(ctx context.Context, quote Quote) error {
-	if _, exists := s.quotes[quote.ID]; exists {
+func (s *MemoryStore) CreateQuote(ctx context.Context, quote QuoteCreateInput) error {
+	s.maxID++
+	id := fmt.Sprintf("%d", s.maxID)
+	newQuote := Quote{
+		ID:        id,
+		Text:      quote.Text,
+		Author:    quote.Author,
+		CreatedAt: time.Now(),
+	}
+	if _, exists := s.quotes[newQuote.ID]; exists {
 		return ErrQuoteAlreadyExists
 	}
-	s.ids = append(s.ids, quote.ID)
-	s.quotes[quote.ID] = quote
-	return s.quotes[quote.ID].Validate()
+	s.ids = append(s.ids, newQuote.ID)
+	s.quotes[newQuote.ID] = newQuote
+	return s.quotes[newQuote.ID].Validate()
 }
 
 func (s *MemoryStore) ListQuotes(ctx context.Context) ([]Quote, error) {
@@ -74,12 +86,16 @@ func (s *MemoryStore) GetRandomQuote(ctx context.Context) (Quote, error) {
 	return quote, nil
 }
 
-func (s *MemoryStore) UpdateQuote(ctx context.Context, quote Quote) error {
+// O(1)
+func (s *MemoryStore) UpdateQuote(ctx context.Context, quote QuoteUpdateInput) error {
 	if _, ok := s.quotes[quote.ID]; !ok {
 		return ErrQuoteNotFound
 	}
 
-	s.quotes[quote.ID] = quote
+	updatedQuote := s.quotes[quote.ID]
+	updatedQuote.Text = quote.Text
+	updatedQuote.Author = quote.Author
+	s.quotes[quote.ID] = updatedQuote
 	return s.quotes[quote.ID].Validate()
 }
 

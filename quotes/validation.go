@@ -4,7 +4,6 @@ import (
 	"time"
 )
 
-// Call after Create and Update operations.
 func (q Quote) Validate() error {
 	if isEmptyString(q.ID) || !isNumeric(q.ID) {
 		return ErrInvalidQuoteID
@@ -21,6 +20,36 @@ func (q Quote) Validate() error {
 	if q.CreatedAt.IsZero() || q.CreatedAt.After(time.Now()) {
 		return ErrInvalidCreateTime
 	}
+
+	return nil
+}
+
+func (q QuoteCreateInput) Validate() error {
+	if isEmptyString(q.Text) {
+		return ErrInvalidQuoteText
+	}
+
+	if isEmptyString(q.Author) {
+		return ErrInvalidQuoteAuthor
+	}
+
+	return nil
+}
+
+func (q QuoteUpdateInput) Validate() error {
+	if isEmptyString(q.ID) || !isNumeric(q.ID) {
+		return ErrInvalidQuoteID
+	}
+
+	if isEmptyString(q.Text) {
+		return ErrInvalidQuoteText
+	}
+
+	if isEmptyString(q.Author) {
+		return ErrInvalidQuoteAuthor
+	}
+
+	// Quote existence validation done in store layer.
 
 	return nil
 }
