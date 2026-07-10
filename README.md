@@ -92,13 +92,39 @@ Both REST and GraphQL should depend on a shared store interface instead of direc
 
 ```go
 type Store interface {
+  CreateQuote(ctx context.Context, quote QuoteCreateInput) error
+
 	ListQuotes(ctx context.Context) ([]Quote, error)
-	GetQuote(ctx context.Context, id string) (*Quote, error)
-	CreateQuote(ctx context.Context, input CreateQuoteInput) (*Quote, error)
-	UpdateQuote(ctx context.Context, id string, input UpdateQuoteInput) (*Quote, error)
+  GetQuoteByID(ctx context.Context, id string) (Quote, error)
+  GetQuotesByAuthor(ctx context.Context, author string) ([]Quote, error)
+  GetRandomQuote(ctx context.Context) (Quote, error)
+
+  UpdateQuote(ctx context.Context, quote QuoteUpdateInput) error
+
 	DeleteQuote(ctx context.Context, id string) error
 }
 ```
+
+Shared input types used by the store:
+
+```go
+type QuoteCreateInput struct {
+  Text   string
+  Author string
+}
+
+type QuoteUpdateInput struct {
+  ID     string
+  Text   *string
+  Author *string
+}
+```
+
+`QuoteUpdateInput` uses partial update semantics:
+
+- `ID` is required.
+- At least one of `Text` or `Author` must be provided.
+- If `Text` or `Author` is provided, it must be non-empty after trimming.
 
 This allows the project to start with `MemoryStore` and later switch to `FirestoreStore` without rewriting the REST or GraphQL layers.
 
