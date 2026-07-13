@@ -174,7 +174,7 @@ http://localhost:8081/
 Base URL:
 
 ```text
-http://localhost:8080
+http://localhost:8080/v1
 ```
 
 | Method | Path | Description |
@@ -183,13 +183,13 @@ http://localhost:8080
 | GET | `/quotes` | List all quotes |
 | GET | `/quotes/:id` | Get one quote |
 | POST | `/quotes` | Create a quote |
-| PUT | `/quotes/:id` | Update a quote |
+| PATCH | `/quotes/:id` | Partially update a quote |
 | DELETE | `/quotes/:id` | Delete a quote |
 
 ### Example REST Create Request
 
 ```http
-POST /quotes
+POST /v1/quotes
 Content-Type: application/json
 
 {
