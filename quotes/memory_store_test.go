@@ -22,7 +22,7 @@ func TestMemoryStoreCreateAndGetQuoteByID(t *testing.T) {
 	store := NewMemoryStore()
 	input := validCreateInput("Edsger W. Dijkstra")
 
-	if err := store.CreateQuote(ctx, input); err != nil {
+	if _, err := store.CreateQuote(ctx, input); err != nil {
 		t.Fatalf("CreateQuote() error = %v, want nil", err)
 	}
 
@@ -48,10 +48,10 @@ func TestMemoryStoreCreateQuoteGeneratesSequentialIDs(t *testing.T) {
 	firstInput := validCreateInput("Author A")
 	secondInput := validCreateInput("Author B")
 
-	if err := store.CreateQuote(ctx, firstInput); err != nil {
+	if _, err := store.CreateQuote(ctx, firstInput); err != nil {
 		t.Fatalf("CreateQuote() first call error = %v, want nil", err)
 	}
-	if err := store.CreateQuote(ctx, secondInput); err != nil {
+	if _, err := store.CreateQuote(ctx, secondInput); err != nil {
 		t.Fatalf("CreateQuote() second call error = %v, want nil", err)
 	}
 
@@ -85,10 +85,10 @@ func TestMemoryStoreListQuotes(t *testing.T) {
 	q1 := validCreateInput("Author A")
 	q2 := validCreateInput("Author B")
 
-	if err := store.CreateQuote(ctx, q1); err != nil {
+	if _, err := store.CreateQuote(ctx, q1); err != nil {
 		t.Fatalf("CreateQuote(q1) error = %v, want nil", err)
 	}
-	if err := store.CreateQuote(ctx, q2); err != nil {
+	if _, err := store.CreateQuote(ctx, q2); err != nil {
 		t.Fatalf("CreateQuote(q2) error = %v, want nil", err)
 	}
 
@@ -119,7 +119,7 @@ func TestMemoryStoreUpdateQuote(t *testing.T) {
 	store := NewMemoryStore()
 	original := validCreateInput("Author A")
 
-	if err := store.CreateQuote(ctx, original); err != nil {
+	if _, err := store.CreateQuote(ctx, original); err != nil {
 		t.Fatalf("CreateQuote() error = %v, want nil", err)
 	}
 
@@ -161,7 +161,7 @@ func TestMemoryStoreUpdateQuoteTextOnly(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryStore()
 
-	if err := store.CreateQuote(ctx, validCreateInput("Author A")); err != nil {
+	if _, err := store.CreateQuote(ctx, validCreateInput("Author A")); err != nil {
 		t.Fatalf("CreateQuote() error = %v, want nil", err)
 	}
 
@@ -190,7 +190,7 @@ func TestMemoryStoreUpdateQuoteAuthorOnly(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryStore()
 
-	if err := store.CreateQuote(ctx, validCreateInput("Author A")); err != nil {
+	if _, err := store.CreateQuote(ctx, validCreateInput("Author A")); err != nil {
 		t.Fatalf("CreateQuote() error = %v, want nil", err)
 	}
 
@@ -219,7 +219,7 @@ func TestMemoryStoreUpdateQuoteNoFieldsToUpdate(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryStore()
 
-	if err := store.CreateQuote(ctx, validCreateInput("Author A")); err != nil {
+	if _, err := store.CreateQuote(ctx, validCreateInput("Author A")); err != nil {
 		t.Fatalf("CreateQuote() error = %v, want nil", err)
 	}
 
@@ -242,7 +242,7 @@ func TestMemoryStoreUpdateQuoteInvalidFieldDoesNotPersist(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryStore()
 
-	if err := store.CreateQuote(ctx, validCreateInput("Author A")); err != nil {
+	if _, err := store.CreateQuote(ctx, validCreateInput("Author A")); err != nil {
 		t.Fatalf("CreateQuote() error = %v, want nil", err)
 	}
 
@@ -269,7 +269,7 @@ func TestMemoryStoreDeleteQuote(t *testing.T) {
 	store := NewMemoryStore()
 	quote := validCreateInput("Author A")
 
-	if err := store.CreateQuote(ctx, quote); err != nil {
+	if _, err := store.CreateQuote(ctx, quote); err != nil {
 		t.Fatalf("CreateQuote() error = %v, want nil", err)
 	}
 
@@ -301,7 +301,7 @@ func TestMemoryStoreGetQuotesByAuthor(t *testing.T) {
 	q3 := validCreateInput("Author B")
 
 	for _, quote := range []QuoteCreateInput{q1, q2, q3} {
-		if err := store.CreateQuote(ctx, quote); err != nil {
+		if _, err := store.CreateQuote(ctx, quote); err != nil {
 			t.Fatalf("CreateQuote() error = %v, want nil", err)
 		}
 	}
@@ -329,7 +329,7 @@ func TestMemoryStoreGetRandomQuote(t *testing.T) {
 	q2 := validCreateInput("Author B")
 
 	for _, quote := range []QuoteCreateInput{q1, q2} {
-		if err := store.CreateQuote(ctx, quote); err != nil {
+		if _, err := store.CreateQuote(ctx, quote); err != nil {
 			t.Fatalf("CreateQuote() error = %v, want nil", err)
 		}
 	}

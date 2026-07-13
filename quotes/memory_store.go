@@ -21,7 +21,7 @@ func NewMemoryStore() *MemoryStore {
 	}
 }
 
-func (s *MemoryStore) CreateQuote(ctx context.Context, quote QuoteCreateInput) error {
+func (s *MemoryStore) CreateQuote(ctx context.Context, quote QuoteCreateInput) (Quote, error) {
 	s.maxID++
 	id := fmt.Sprintf("%d", s.maxID)
 	newQuote := Quote{
@@ -31,11 +31,11 @@ func (s *MemoryStore) CreateQuote(ctx context.Context, quote QuoteCreateInput) e
 		CreatedAt: time.Now(),
 	}
 	if _, exists := s.quotes[newQuote.ID]; exists {
-		return ErrQuoteAlreadyExists
+		return Quote{}, ErrQuoteAlreadyExists
 	}
 	s.ids = append(s.ids, newQuote.ID)
 	s.quotes[newQuote.ID] = newQuote
-	return s.quotes[newQuote.ID].Validate()
+	return newQuote, s.quotes[newQuote.ID].Validate()
 }
 
 func (s *MemoryStore) ListQuotes(ctx context.Context) ([]Quote, error) {
