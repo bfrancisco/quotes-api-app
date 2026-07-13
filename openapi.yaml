@@ -1,0 +1,416 @@
+openapi: 3.1.0
+info:
+  title: Quotes API
+  version: 1.0.0-draft
+  summary: REST API for managing quotes with in-memory storage backend.
+  description: |
+    Draft OpenAPI 3.1 contract for Phase 2 (REST API + in-memory storage).
+    The API uses a consistent response envelope:
+      - Success: { "data": ... , "meta"?: ... }
+      - Error:   { "error": { "code", "message", "details"? } }
+
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+
+servers:
+  - url: http://localhost:8080/v1
+    description: Local development server (versioned base path)
+
+tags:
+  - name: Health
+  - name: Quotes
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      operationId: getHealth
+      summary: Health check
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                ok:
+                  value:
+                    data:
+                      status: ok
+
+  /quotes:
+    get:
+      tags: [Quotes]
+      operationId: listQuotes
+      summary: List quotes
+      description: Returns all quotes, with optional filtering by author and offset pagination.
+      parameters:
+        - in: query
+          name: author
+          required: false
+          description: Exact author filter.
+          schema:
+            type: string
+            minLength: 1
+        - in: query
+          name: limit
+          required: false
+          description: Number of items to return.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: offset
+          required: false
+          description: Number of items to skip.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Quote list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Quotes]
+      operationId: createQuote
+      summary: Create a new quote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteCreateRequest'
+            examples:
+              sample:
+                value:
+                  text: Simplicity is prerequisite for reliability.
+                  author: Edsger W. Dijkstra
+      responses:
+        '201':
+          description: Created
+          headers:
+            Location:
+              description: URL of the created quote resource
+              schema:
+                type: string
+                example: /v1/quotes/1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /quotes/random:
+    get:
+      tags: [Quotes]
+      operationId: getRandomQuote
+      summary: Get a random quote
+      responses:
+        '200':
+          description: Random quote
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /quotes/{id}:
+    get:
+      tags: [Quotes]
+      operationId: getQuoteById
+      summary: Get quote by ID
+      parameters:
+        - $ref: '#/components/parameters/QuoteId'
+      responses:
+        '200':
+          description: Quote found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    patch:
+      tags: [Quotes]
+      operationId: patchQuote
+      summary: Partially update a quote
+      description: At least one field (text or author) must be provided.
+      parameters:
+        - $ref: '#/components/parameters/QuoteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteUpdateRequest'
+            examples:
+              updateText:
+                value:
+                  text: Simplicity is a prerequisite for reliability.
+              updateAuthor:
+                value:
+                  author: Edsger Dijkstra
+      responses:
+        '200':
+          description: Updated quote
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags: [Quotes]
+      operationId: deleteQuote
+      summary: Delete quote by ID
+      parameters:
+        - $ref: '#/components/parameters/QuoteId'
+      responses:
+        '204':
+          description: Deleted successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    QuoteId:
+      in: path
+      name: id
+      required: true
+      description: Quote identifier (numeric string)
+      schema:
+        type: string
+        pattern: '^[0-9]+$'
+        examples: ["1"]
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            invalidText:
+              value:
+                error:
+                  code: INVALID_QUOTE_TEXT
+                  message: Invalid quote text
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missingQuote:
+              value:
+                error:
+                  code: QUOTE_NOT_FOUND
+                  message: Quote not found
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            duplicateQuote:
+              value:
+                error:
+                  code: QUOTE_ALREADY_EXISTS
+                  message: Quote already exists
+
+    InternalError:
+      description: Unexpected internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            internal:
+              value:
+                error:
+                  code: INTERNAL_ERROR
+                  message: Unexpected error
+
+  schemas:
+    Quote:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - text
+        - author
+        - createdAt
+      properties:
+        id:
+          type: string
+          pattern: '^[0-9]+$'
+          example: "1"
+        text:
+          type: string
+          minLength: 1
+          example: Simplicity is prerequisite for reliability.
+        author:
+          type: string
+          minLength: 1
+          example: Edsger W. Dijkstra
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC3339 timestamp
+          example: 2026-07-13T10:30:00Z
+
+    QuoteCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - text
+        - author
+      properties:
+        text:
+          type: string
+          minLength: 1
+        author:
+          type: string
+          minLength: 1
+
+    QuoteUpdateRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        text:
+          type: string
+          minLength: 1
+        author:
+          type: string
+          minLength: 1
+
+    MetaPagination:
+      type: object
+      additionalProperties: false
+      required:
+        - count
+        - limit
+        - offset
+      properties:
+        count:
+          type: integer
+          minimum: 0
+          example: 2
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 20
+        offset:
+          type: integer
+          minimum: 0
+          example: 0
+
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - status
+          properties:
+            status:
+              type: string
+              enum: [ok]
+
+    QuoteResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/Quote'
+
+    QuoteListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Quote'
+        meta:
+          $ref: '#/components/schemas/MetaPagination'
+
+    ErrorObject:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          enum:
+            - INVALID_QUOTE_ID
+            - INVALID_QUOTE_TEXT
+            - INVALID_QUOTE_AUTHOR
+            - NO_FIELDS_TO_UPDATE
+            - QUOTE_NOT_FOUND
+            - QUOTE_ALREADY_EXISTS
+            - INTERNAL_ERROR
+        message:
+          type: string
+        details:
+          description: Optional structured error details for debugging/validation.
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorObject'
