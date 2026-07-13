@@ -38,12 +38,19 @@ type apiError struct {
 	Message string `json:"message"`
 }
 
+type healthResponse struct {
+	Data struct {
+		Status string `json:"status"`
+	} `json:"data"`
+}
+
 func NewHandler(store quotes.Store) *Handler {
 	return &Handler{store: store}
 }
 
 func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup) {
 	v1.POST("/quotes", h.createQuote)
+	v1.GET("/health", h.health)
 }
 
 func (h *Handler) createQuote(c *gin.Context) {
@@ -65,6 +72,16 @@ func (h *Handler) createQuote(c *gin.Context) {
 	c.Header("Location", "/v1/quotes/"+createdQuote.ID)
 	c.JSON(http.StatusCreated, quoteResponse{
 		Data: toQuotePayload(createdQuote),
+	})
+}
+
+func (h *Handler) health(c *gin.Context) {
+	c.JSON(http.StatusOK, healthResponse{
+		Data: struct {
+			Status string `json:"status"`
+		}{
+			Status: "ok",
+		},
 	})
 }
 
