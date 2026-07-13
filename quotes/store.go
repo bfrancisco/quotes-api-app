@@ -3,7 +3,7 @@ package quotes
 import "context"
 
 type Store interface {
-	CreateQuote(ctx context.Context, quote QuoteCreateInput) error
+	CreateQuote(ctx context.Context, quote QuoteCreateInput) (Quote, error)
 
 	ListQuotes(ctx context.Context) ([]Quote, error)
 	GetQuoteByID(ctx context.Context, id string) (Quote, error)
