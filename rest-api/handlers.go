@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/bfrancisco/quotes-api-app/quotes"
@@ -69,6 +70,7 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup) {
 	v1.GET("/health", h.health)
 	v1.POST("/quotes", h.createQuote)
 	v1.GET("/quotes", h.getQuotes)
+	v1.GET("/quotes/:id", h.getQuoteByID)
 }
 
 func (h *Handler) health(c *gin.Context) {
@@ -161,6 +163,24 @@ func (h *Handler) getQuotes(c *gin.Context) {
 	})
 }
 
+func (h *Handler) getQuoteByID(c *gin.Context) {
+	id := c.Param("id")
+	if !isNumericID(id) {
+		h.writeStoreError(c, quotes.ErrInvalidQuoteID)
+		return
+	}
+
+	quote, err := h.store.GetQuoteByID(c.Request.Context(), id)
+	if err != nil {
+		h.writeStoreError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, quoteResponse{
+		Data: toQuotePayload(quote),
+	})
+}
+
 func (h *Handler) writeStoreError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, quotes.ErrInvalidQuoteID):
@@ -197,4 +217,19 @@ func toQuotePayload(quote quotes.Quote) quotePayload {
 		Author:    quote.Author,
 		CreatedAt: quote.CreatedAt,
 	}
+}
+
+func isNumericID(value string) bool {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return false
+	}
+
+	for _, ch := range trimmed {
+		if ch < '0' || ch > '9' {
+			return false
+		}
+	}
+
+	return true
 }

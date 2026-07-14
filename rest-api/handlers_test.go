@@ -322,3 +322,97 @@ func TestGetQuotesEndpoint(t *testing.T) {
 		}
 	})
 }
+
+func TestGetQuoteByIDEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("returns 200 for existing quote", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		createReq := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(`{"text":"One quote","author":"Author One"}`))
+		createReq.Header.Set("Content-Type", "application/json")
+		createResp := httptest.NewRecorder()
+		router.ServeHTTP(createResp, createReq)
+		if createResp.Code != http.StatusCreated {
+			t.Fatalf("seed create status = %d, want %d", createResp.Code, http.StatusCreated)
+		}
+
+		getReq := httptest.NewRequest(http.MethodGet, "/v1/quotes/1", nil)
+		getResp := httptest.NewRecorder()
+		router.ServeHTTP(getResp, getReq)
+
+		if getResp.Code != http.StatusOK {
+			t.Fatalf("status code = %d, want %d", getResp.Code, http.StatusOK)
+		}
+
+		var payload testQuoteEnvelope
+		if err := json.Unmarshal(getResp.Body.Bytes(), &payload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+
+		if payload.Data.ID != "1" {
+			t.Fatalf("quote id = %q, want %q", payload.Data.ID, "1")
+		}
+		if payload.Data.Text != "One quote" {
+			t.Fatalf("quote text = %q, want %q", payload.Data.Text, "One quote")
+		}
+		if payload.Data.Author != "Author One" {
+			t.Fatalf("quote author = %q, want %q", payload.Data.Author, "Author One")
+		}
+	})
+
+	t.Run("returns 400 for invalid quote id", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		req := httptest.NewRequest(http.MethodGet, "/v1/quotes/abc", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("status code = %d, want %d", resp.Code, http.StatusBadRequest)
+		}
+
+		var errPayload testErrorEnvelope
+		if err := json.Unmarshal(resp.Body.Bytes(), &errPayload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+		if errPayload.Error.Code != "INVALID_QUOTE_ID" {
+			t.Fatalf("error code = %q, want %q", errPayload.Error.Code, "INVALID_QUOTE_ID")
+		}
+	})
+
+	t.Run("returns 404 for non-existent quote", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		req := httptest.NewRequest(http.MethodGet, "/v1/quotes/999", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusNotFound {
+			t.Fatalf("status code = %d, want %d", resp.Code, http.StatusNotFound)
+		}
+
+		var errPayload testErrorEnvelope
+		if err := json.Unmarshal(resp.Body.Bytes(), &errPayload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+		if errPayload.Error.Code != "QUOTE_NOT_FOUND" {
+			t.Fatalf("error code = %q, want %q", errPayload.Error.Code, "QUOTE_NOT_FOUND")
+		}
+	})
+}
