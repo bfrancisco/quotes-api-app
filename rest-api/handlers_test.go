@@ -416,3 +416,367 @@ func TestGetQuoteByIDEndpoint(t *testing.T) {
 		}
 	})
 }
+
+func TestUpdateQuoteEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("returns 200 when updating text only", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		createReq := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(`{"text":"Original text","author":"Original author"}`))
+		createReq.Header.Set("Content-Type", "application/json")
+		createResp := httptest.NewRecorder()
+		router.ServeHTTP(createResp, createReq)
+		if createResp.Code != http.StatusCreated {
+			t.Fatalf("seed create status = %d, want %d", createResp.Code, http.StatusCreated)
+		}
+
+		updateReq := httptest.NewRequest(http.MethodPatch, "/v1/quotes/1", bytes.NewBufferString(`{"text":"Updated text"}`))
+		updateReq.Header.Set("Content-Type", "application/json")
+		updateResp := httptest.NewRecorder()
+		router.ServeHTTP(updateResp, updateReq)
+
+		if updateResp.Code != http.StatusOK {
+			t.Fatalf("status code = %d, want %d", updateResp.Code, http.StatusOK)
+		}
+
+		var payload testQuoteEnvelope
+		if err := json.Unmarshal(updateResp.Body.Bytes(), &payload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+
+		if payload.Data.ID != "1" {
+			t.Fatalf("quote id = %q, want %q", payload.Data.ID, "1")
+		}
+		if payload.Data.Text != "Updated text" {
+			t.Fatalf("quote text = %q, want %q", payload.Data.Text, "Updated text")
+		}
+		if payload.Data.Author != "Original author" {
+			t.Fatalf("quote author = %q, want %q", payload.Data.Author, "Original author")
+		}
+	})
+
+	t.Run("returns 200 when updating author only", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		createReq := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(`{"text":"Original text","author":"Original author"}`))
+		createReq.Header.Set("Content-Type", "application/json")
+		createResp := httptest.NewRecorder()
+		router.ServeHTTP(createResp, createReq)
+		if createResp.Code != http.StatusCreated {
+			t.Fatalf("seed create status = %d, want %d", createResp.Code, http.StatusCreated)
+		}
+
+		updateReq := httptest.NewRequest(http.MethodPatch, "/v1/quotes/1", bytes.NewBufferString(`{"author":"Updated author"}`))
+		updateReq.Header.Set("Content-Type", "application/json")
+		updateResp := httptest.NewRecorder()
+		router.ServeHTTP(updateResp, updateReq)
+
+		if updateResp.Code != http.StatusOK {
+			t.Fatalf("status code = %d, want %d", updateResp.Code, http.StatusOK)
+		}
+
+		var payload testQuoteEnvelope
+		if err := json.Unmarshal(updateResp.Body.Bytes(), &payload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+
+		if payload.Data.ID != "1" {
+			t.Fatalf("quote id = %q, want %q", payload.Data.ID, "1")
+		}
+		if payload.Data.Text != "Original text" {
+			t.Fatalf("quote text = %q, want %q", payload.Data.Text, "Original text")
+		}
+		if payload.Data.Author != "Updated author" {
+			t.Fatalf("quote author = %q, want %q", payload.Data.Author, "Updated author")
+		}
+	})
+
+	t.Run("returns 400 for invalid quote id", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/abc", bytes.NewBufferString(`{"text":"Updated text"}`))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("status code = %d, want %d", resp.Code, http.StatusBadRequest)
+		}
+
+		var errPayload testErrorEnvelope
+		if err := json.Unmarshal(resp.Body.Bytes(), &errPayload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+		if errPayload.Error.Code != "INVALID_QUOTE_ID" {
+			t.Fatalf("error code = %q, want %q", errPayload.Error.Code, "INVALID_QUOTE_ID")
+		}
+	})
+
+	t.Run("returns 400 for invalid json body", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/1", bytes.NewBufferString(`{"text":`))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("status code = %d, want %d", resp.Code, http.StatusBadRequest)
+		}
+
+		var errPayload testErrorEnvelope
+		if err := json.Unmarshal(resp.Body.Bytes(), &errPayload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+		if errPayload.Error.Code != "INVALID_REQUEST_BODY" {
+			t.Fatalf("error code = %q, want %q", errPayload.Error.Code, "INVALID_REQUEST_BODY")
+		}
+	})
+
+	t.Run("returns 400 for empty patch object", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		createReq := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(`{"text":"Original text","author":"Original author"}`))
+		createReq.Header.Set("Content-Type", "application/json")
+		createResp := httptest.NewRecorder()
+		router.ServeHTTP(createResp, createReq)
+		if createResp.Code != http.StatusCreated {
+			t.Fatalf("seed create status = %d, want %d", createResp.Code, http.StatusCreated)
+		}
+
+		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/1", bytes.NewBufferString(`{}`))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("status code = %d, want %d", resp.Code, http.StatusBadRequest)
+		}
+
+		var errPayload testErrorEnvelope
+		if err := json.Unmarshal(resp.Body.Bytes(), &errPayload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+		if errPayload.Error.Code != "NO_FIELDS_TO_UPDATE" {
+			t.Fatalf("error code = %q, want %q", errPayload.Error.Code, "NO_FIELDS_TO_UPDATE")
+		}
+	})
+
+	t.Run("returns 400 for invalid quote text", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		createReq := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(`{"text":"Original text","author":"Original author"}`))
+		createReq.Header.Set("Content-Type", "application/json")
+		createResp := httptest.NewRecorder()
+		router.ServeHTTP(createResp, createReq)
+		if createResp.Code != http.StatusCreated {
+			t.Fatalf("seed create status = %d, want %d", createResp.Code, http.StatusCreated)
+		}
+
+		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/1", bytes.NewBufferString(`{"text":" "}`))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("status code = %d, want %d", resp.Code, http.StatusBadRequest)
+		}
+
+		var errPayload testErrorEnvelope
+		if err := json.Unmarshal(resp.Body.Bytes(), &errPayload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+		if errPayload.Error.Code != "INVALID_QUOTE_TEXT" {
+			t.Fatalf("error code = %q, want %q", errPayload.Error.Code, "INVALID_QUOTE_TEXT")
+		}
+	})
+
+	t.Run("returns 400 for invalid quote author", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		createReq := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(`{"text":"Original text","author":"Original author"}`))
+		createReq.Header.Set("Content-Type", "application/json")
+		createResp := httptest.NewRecorder()
+		router.ServeHTTP(createResp, createReq)
+		if createResp.Code != http.StatusCreated {
+			t.Fatalf("seed create status = %d, want %d", createResp.Code, http.StatusCreated)
+		}
+
+		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/1", bytes.NewBufferString(`{"author":" "}`))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("status code = %d, want %d", resp.Code, http.StatusBadRequest)
+		}
+
+		var errPayload testErrorEnvelope
+		if err := json.Unmarshal(resp.Body.Bytes(), &errPayload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+		if errPayload.Error.Code != "INVALID_QUOTE_AUTHOR" {
+			t.Fatalf("error code = %q, want %q", errPayload.Error.Code, "INVALID_QUOTE_AUTHOR")
+		}
+	})
+
+	t.Run("returns 404 for non-existent quote", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/999", bytes.NewBufferString(`{"text":"Updated text"}`))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusNotFound {
+			t.Fatalf("status code = %d, want %d", resp.Code, http.StatusNotFound)
+		}
+
+		var errPayload testErrorEnvelope
+		if err := json.Unmarshal(resp.Body.Bytes(), &errPayload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+		if errPayload.Error.Code != "QUOTE_NOT_FOUND" {
+			t.Fatalf("error code = %q, want %q", errPayload.Error.Code, "QUOTE_NOT_FOUND")
+		}
+	})
+}
+
+func TestDeleteQuoteEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("returns 204 for existing quote and quote is no longer retrievable", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		createReq := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(`{"text":"One quote","author":"Author One"}`))
+		createReq.Header.Set("Content-Type", "application/json")
+		createResp := httptest.NewRecorder()
+		router.ServeHTTP(createResp, createReq)
+		if createResp.Code != http.StatusCreated {
+			t.Fatalf("seed create status = %d, want %d", createResp.Code, http.StatusCreated)
+		}
+
+		deleteReq := httptest.NewRequest(http.MethodDelete, "/v1/quotes/1", nil)
+		deleteResp := httptest.NewRecorder()
+		router.ServeHTTP(deleteResp, deleteReq)
+
+		if deleteResp.Code != http.StatusNoContent {
+			t.Fatalf("status code = %d, want %d", deleteResp.Code, http.StatusNoContent)
+		}
+		if deleteResp.Body.Len() != 0 {
+			t.Fatalf("response body length = %d, want 0", deleteResp.Body.Len())
+		}
+
+		getReq := httptest.NewRequest(http.MethodGet, "/v1/quotes/1", nil)
+		getResp := httptest.NewRecorder()
+		router.ServeHTTP(getResp, getReq)
+
+		if getResp.Code != http.StatusNotFound {
+			t.Fatalf("status code after delete = %d, want %d", getResp.Code, http.StatusNotFound)
+		}
+
+		var errPayload testErrorEnvelope
+		if err := json.Unmarshal(getResp.Body.Bytes(), &errPayload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+		if errPayload.Error.Code != "QUOTE_NOT_FOUND" {
+			t.Fatalf("error code = %q, want %q", errPayload.Error.Code, "QUOTE_NOT_FOUND")
+		}
+	})
+
+	t.Run("returns 400 for invalid quote id", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		req := httptest.NewRequest(http.MethodDelete, "/v1/quotes/abc", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("status code = %d, want %d", resp.Code, http.StatusBadRequest)
+		}
+
+		var errPayload testErrorEnvelope
+		if err := json.Unmarshal(resp.Body.Bytes(), &errPayload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+		if errPayload.Error.Code != "INVALID_QUOTE_ID" {
+			t.Fatalf("error code = %q, want %q", errPayload.Error.Code, "INVALID_QUOTE_ID")
+		}
+	})
+
+	t.Run("returns 404 for non-existent quote", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		req := httptest.NewRequest(http.MethodDelete, "/v1/quotes/999", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusNotFound {
+			t.Fatalf("status code = %d, want %d", resp.Code, http.StatusNotFound)
+		}
+
+		var errPayload testErrorEnvelope
+		if err := json.Unmarshal(resp.Body.Bytes(), &errPayload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+		if errPayload.Error.Code != "QUOTE_NOT_FOUND" {
+			t.Fatalf("error code = %q, want %q", errPayload.Error.Code, "QUOTE_NOT_FOUND")
+		}
+	})
+}

@@ -25,6 +25,11 @@ type getQuotesRequest struct {
 	Offset int    `form:"offset"`
 }
 
+type updateQuoteRequest struct {
+	Text   *string `json:"text"` // PATCH: using pointer allow distinguishing between "not provided" and "empty string"
+	Author *string `json:"author"`
+}
+
 type quoteListMeta struct {
 	Count  int `json:"count"`
 	Limit  int `json:"limit"`
@@ -71,6 +76,8 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup) {
 	v1.POST("/quotes", h.createQuote)
 	v1.GET("/quotes", h.getQuotes)
 	v1.GET("/quotes/:id", h.getQuoteByID)
+	v1.PATCH("/quotes/:id", h.updateQuote)
+	v1.DELETE("/quotes/:id", h.deleteQuote)
 }
 
 func (h *Handler) health(c *gin.Context) {
@@ -179,6 +186,49 @@ func (h *Handler) getQuoteByID(c *gin.Context) {
 	c.JSON(http.StatusOK, quoteResponse{
 		Data: toQuotePayload(quote),
 	})
+}
+
+func (h *Handler) updateQuote(c *gin.Context) {
+	id := c.Param("id")
+	if !isNumericID(id) {
+		h.writeStoreError(c, quotes.ErrInvalidQuoteID)
+		return
+	}
+
+	var req updateQuoteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		writeError(c, http.StatusBadRequest, "INVALID_REQUEST_BODY", "Invalid request body")
+		return
+	}
+
+	updatedQuote, err := h.store.UpdateQuote(c.Request.Context(), quotes.QuoteUpdateInput{
+		ID:     id,
+		Text:   req.Text,
+		Author: req.Author,
+	})
+	if err != nil {
+		h.writeStoreError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, quoteResponse{
+		Data: toQuotePayload(updatedQuote),
+	})
+}
+
+func (h *Handler) deleteQuote(c *gin.Context) {
+	id := c.Param("id")
+	if !isNumericID(id) {
+		h.writeStoreError(c, quotes.ErrInvalidQuoteID)
+		return
+	}
+
+	if err := h.store.DeleteQuote(c.Request.Context(), id); err != nil {
+		h.writeStoreError(c, err)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 func (h *Handler) writeStoreError(c *gin.Context, err error) {
