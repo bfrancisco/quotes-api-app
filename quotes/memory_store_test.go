@@ -129,7 +129,7 @@ func TestMemoryStoreUpdateQuote(t *testing.T) {
 		Author: memoryStoreStringPtr("Author B"),
 	}
 
-	if err := store.UpdateQuote(ctx, updated); err != nil {
+	if _, err := store.UpdateQuote(ctx, updated); err != nil {
 		t.Fatalf("UpdateQuote() error = %v, want nil", err)
 	}
 
@@ -147,7 +147,7 @@ func TestMemoryStoreUpdateQuoteNotFound(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryStore()
 
-	err := store.UpdateQuote(ctx, QuoteUpdateInput{
+	_, err := store.UpdateQuote(ctx, QuoteUpdateInput{
 		ID:     "404",
 		Text:   memoryStoreStringPtr("Simplicity is prerequisite for reliability."),
 		Author: memoryStoreStringPtr("Missing"),
@@ -165,11 +165,10 @@ func TestMemoryStoreUpdateQuoteTextOnly(t *testing.T) {
 		t.Fatalf("CreateQuote() error = %v, want nil", err)
 	}
 
-	err := store.UpdateQuote(ctx, QuoteUpdateInput{
+	if _, err := store.UpdateQuote(ctx, QuoteUpdateInput{
 		ID:   "1",
 		Text: memoryStoreStringPtr("Updated text only"),
-	})
-	if err != nil {
+	}); err != nil {
 		t.Fatalf("UpdateQuote() error = %v, want nil", err)
 	}
 
@@ -194,7 +193,7 @@ func TestMemoryStoreUpdateQuoteAuthorOnly(t *testing.T) {
 		t.Fatalf("CreateQuote() error = %v, want nil", err)
 	}
 
-	err := store.UpdateQuote(ctx, QuoteUpdateInput{
+	_, err := store.UpdateQuote(ctx, QuoteUpdateInput{
 		ID:     "1",
 		Author: memoryStoreStringPtr("Author B"),
 	})
@@ -223,7 +222,7 @@ func TestMemoryStoreUpdateQuoteNoFieldsToUpdate(t *testing.T) {
 		t.Fatalf("CreateQuote() error = %v, want nil", err)
 	}
 
-	err := store.UpdateQuote(ctx, QuoteUpdateInput{ID: "1"})
+	_, err := store.UpdateQuote(ctx, QuoteUpdateInput{ID: "1"})
 	if !errors.Is(err, ErrNoFieldsToUpdate) {
 		t.Fatalf("UpdateQuote() error = %v, want %v", err, ErrNoFieldsToUpdate)
 	}
@@ -246,7 +245,7 @@ func TestMemoryStoreUpdateQuoteInvalidFieldDoesNotPersist(t *testing.T) {
 		t.Fatalf("CreateQuote() error = %v, want nil", err)
 	}
 
-	err := store.UpdateQuote(ctx, QuoteUpdateInput{
+	_, err := store.UpdateQuote(ctx, QuoteUpdateInput{
 		ID:   "1",
 		Text: memoryStoreStringPtr(" "),
 	})
