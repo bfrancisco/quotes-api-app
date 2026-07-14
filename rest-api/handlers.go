@@ -18,6 +18,23 @@ type createQuoteRequest struct {
 	Author string `json:"author"`
 }
 
+type getQuotesRequest struct {
+	Author string `form:"author"`
+	Limit  int    `form:"limit"`
+	Offset int    `form:"offset"`
+}
+
+type quoteListMeta struct {
+	Count  int `json:"count"`
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+}
+
+type quoteListResponse struct {
+	Data []quotePayload `json:"data"`
+	Meta quoteListMeta  `json:"meta"`
+}
+
 type quotePayload struct {
 	ID        string    `json:"id"`
 	Text      string    `json:"text"`
@@ -49,8 +66,19 @@ func NewHandler(store quotes.Store) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup) {
-	v1.POST("/quotes", h.createQuote)
 	v1.GET("/health", h.health)
+	v1.POST("/quotes", h.createQuote)
+	v1.GET("/quotes", h.getQuotes)
+}
+
+func (h *Handler) health(c *gin.Context) {
+	c.JSON(http.StatusOK, healthResponse{
+		Data: struct {
+			Status string `json:"status"`
+		}{
+			Status: "ok",
+		},
+	})
 }
 
 func (h *Handler) createQuote(c *gin.Context) {
@@ -75,12 +103,60 @@ func (h *Handler) createQuote(c *gin.Context) {
 	})
 }
 
-func (h *Handler) health(c *gin.Context) {
-	c.JSON(http.StatusOK, healthResponse{
-		Data: struct {
-			Status string `json:"status"`
-		}{
-			Status: "ok",
+func (h *Handler) getQuotes(c *gin.Context) {
+	var req getQuotesRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		writeError(c, http.StatusBadRequest, "INVALID_QUERY_PARAMS", "Invalid query parameters")
+		return
+	}
+
+	if req.Limit == 0 {
+		req.Limit = 20
+	}
+	if req.Offset < 0 || req.Limit < 1 || req.Limit > 100 {
+		writeError(c, http.StatusBadRequest, "INVALID_QUERY_PARAMS", "Invalid query parameters")
+		return
+	}
+
+	var (
+		allQuotes []quotes.Quote
+		err       error
+	)
+
+	if req.Author != "" {
+		allQuotes, err = h.store.GetQuotesByAuthor(c.Request.Context(), req.Author)
+	} else {
+		allQuotes, err = h.store.ListQuotes(c.Request.Context())
+	}
+
+	if err != nil {
+		h.writeStoreError(c, err)
+		return
+	}
+
+	start := req.Offset
+	if start > len(allQuotes) {
+		start = len(allQuotes)
+	}
+
+	end := start + req.Limit
+	if end > len(allQuotes) {
+		end = len(allQuotes)
+	}
+
+	page := allQuotes[start:end]
+
+	data := make([]quotePayload, 0, len(page))
+	for _, quote := range page {
+		data = append(data, toQuotePayload(quote))
+	}
+
+	c.JSON(http.StatusOK, quoteListResponse{
+		Data: data,
+		Meta: quoteListMeta{
+			Count:  len(data),
+			Limit:  req.Limit,
+			Offset: req.Offset,
 		},
 	})
 }

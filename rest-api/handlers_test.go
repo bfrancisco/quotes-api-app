@@ -32,6 +32,19 @@ type testHealthEnvelope struct {
 	} `json:"data"`
 }
 
+type testQuoteListEnvelope struct {
+	Data []struct {
+		ID     string `json:"id"`
+		Text   string `json:"text"`
+		Author string `json:"author"`
+	} `json:"data"`
+	Meta struct {
+		Count  int `json:"count"`
+		Limit  int `json:"limit"`
+		Offset int `json:"offset"`
+	} `json:"meta"`
+}
+
 func TestHealthEndpoint(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -146,4 +159,166 @@ func TestCreateQuoteEndpoint(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetQuotesEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("returns 200 with empty list and default meta", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		req := httptest.NewRequest(http.MethodGet, "/v1/quotes", nil)
+		resp := httptest.NewRecorder()
+
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusOK {
+			t.Fatalf("status code = %d, want %d", resp.Code, http.StatusOK)
+		}
+
+		var payload testQuoteListEnvelope
+		if err := json.Unmarshal(resp.Body.Bytes(), &payload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+
+		if len(payload.Data) != 0 {
+			t.Fatalf("data length = %d, want 0", len(payload.Data))
+		}
+		if payload.Meta.Count != 0 {
+			t.Fatalf("meta.count = %d, want 0", payload.Meta.Count)
+		}
+		if payload.Meta.Limit != 20 {
+			t.Fatalf("meta.limit = %d, want 20", payload.Meta.Limit)
+		}
+		if payload.Meta.Offset != 0 {
+			t.Fatalf("meta.offset = %d, want 0", payload.Meta.Offset)
+		}
+	})
+
+	t.Run("returns 200 and paginates with limit and offset", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		for _, body := range []string{
+			`{"text":"Quote 1","author":"Author A"}`,
+			`{"text":"Quote 2","author":"Author B"}`,
+			`{"text":"Quote 3","author":"Author C"}`,
+		} {
+			req := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(body))
+			req.Header.Set("Content-Type", "application/json")
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
+			if resp.Code != http.StatusCreated {
+				t.Fatalf("seed create status = %d, want %d", resp.Code, http.StatusCreated)
+			}
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "/v1/quotes?limit=2&offset=1", nil)
+		resp := httptest.NewRecorder()
+
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusOK {
+			t.Fatalf("status code = %d, want %d", resp.Code, http.StatusOK)
+		}
+
+		var payload testQuoteListEnvelope
+		if err := json.Unmarshal(resp.Body.Bytes(), &payload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+
+		if len(payload.Data) != 2 {
+			t.Fatalf("data length = %d, want 2", len(payload.Data))
+		}
+		if payload.Meta.Count != 2 {
+			t.Fatalf("meta.count = %d, want 2", payload.Meta.Count)
+		}
+		if payload.Meta.Limit != 2 {
+			t.Fatalf("meta.limit = %d, want 2", payload.Meta.Limit)
+		}
+		if payload.Meta.Offset != 1 {
+			t.Fatalf("meta.offset = %d, want 1", payload.Meta.Offset)
+		}
+	})
+
+	t.Run("returns 200 and filters by author", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		for _, body := range []string{
+			`{"text":"Quote A1","author":"Author A"}`,
+			`{"text":"Quote B1","author":"Author B"}`,
+			`{"text":"Quote A2","author":"Author A"}`,
+		} {
+			req := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(body))
+			req.Header.Set("Content-Type", "application/json")
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
+			if resp.Code != http.StatusCreated {
+				t.Fatalf("seed create status = %d, want %d", resp.Code, http.StatusCreated)
+			}
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "/v1/quotes?author=Author%20A", nil)
+		resp := httptest.NewRecorder()
+
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusOK {
+			t.Fatalf("status code = %d, want %d", resp.Code, http.StatusOK)
+		}
+
+		var payload testQuoteListEnvelope
+		if err := json.Unmarshal(resp.Body.Bytes(), &payload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+
+		if len(payload.Data) != 2 {
+			t.Fatalf("data length = %d, want 2", len(payload.Data))
+		}
+		for _, quote := range payload.Data {
+			if quote.Author != "Author A" {
+				t.Fatalf("author = %q, want %q", quote.Author, "Author A")
+			}
+		}
+	})
+
+	t.Run("returns 400 for invalid query params", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		req := httptest.NewRequest(http.MethodGet, "/v1/quotes?limit=0&offset=-1", nil)
+		resp := httptest.NewRecorder()
+
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("status code = %d, want %d", resp.Code, http.StatusBadRequest)
+		}
+
+		var errPayload testErrorEnvelope
+		if err := json.Unmarshal(resp.Body.Bytes(), &errPayload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+		if errPayload.Error.Code != "INVALID_QUERY_PARAMS" {
+			t.Fatalf("error code = %q, want %q", errPayload.Error.Code, "INVALID_QUERY_PARAMS")
+		}
+	})
 }
