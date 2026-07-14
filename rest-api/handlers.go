@@ -76,6 +76,7 @@ func (h *Handler) RegisterRoutes(v1 *gin.RouterGroup) {
 	v1.POST("/quotes", h.createQuote)
 	v1.GET("/quotes", h.getQuotes)
 	v1.GET("/quotes/:id", h.getQuoteByID)
+	v1.GET("/quotes/random", h.getRandomQuote)
 	v1.PATCH("/quotes/:id", h.updateQuote)
 	v1.DELETE("/quotes/:id", h.deleteQuote)
 }
@@ -185,6 +186,18 @@ func (h *Handler) getQuoteByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, quoteResponse{
 		Data: toQuotePayload(quote),
+	})
+}
+
+func (h *Handler) getRandomQuote(c *gin.Context) {
+	randomQuote, err := h.store.GetRandomQuote(c.Request.Context())
+	if err != nil {
+		h.writeStoreError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, quoteResponse{
+		Data: toQuotePayload(randomQuote),
 	})
 }
 

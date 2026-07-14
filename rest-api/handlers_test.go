@@ -780,3 +780,61 @@ func TestDeleteQuoteEndpoint(t *testing.T) {
 		}
 	})
 }
+
+func TestGetRandomQuoteEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("returns 200 with a random quote from the store", func(t *testing.T) {
+		store := quotes.NewMemoryStore()
+		handler := NewHandler(store)
+
+		router := gin.New()
+		v1 := router.Group("/v1")
+		handler.RegisterRoutes(v1)
+
+		for _, body := range []string{
+			`{"text":"Quote 1","author":"Author A"}`,
+			`{"text":"Quote 2","author":"Author B"}`,
+			`{"text":"Quote 3","author":"Author C"}`,
+		} {
+			req := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(body))
+			req.Header.Set("Content-Type", "application/json")
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
+			if resp.Code != http.StatusCreated {
+				t.Fatalf("seed create status = %d, want %d", resp.Code, http.StatusCreated)
+			}
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "/v1/quotes/random", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusOK {
+			t.Fatalf("status code = %d, want %d", resp.Code, http.StatusOK)
+		}
+
+		var payload testQuoteEnvelope
+		if err := json.Unmarshal(resp.Body.Bytes(), &payload); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+
+		if payload.Data.ID == "" {
+			t.Fatalf("quote id = empty, want non-empty")
+		}
+
+		validQuotes := map[string]string{
+			"Quote 1": "Author A",
+			"Quote 2": "Author B",
+			"Quote 3": "Author C",
+		}
+
+		author, ok := validQuotes[payload.Data.Text]
+		if !ok {
+			t.Fatalf("quote text = %q, want one of seeded quotes", payload.Data.Text)
+		}
+		if payload.Data.Author != author {
+			t.Fatalf("quote author = %q, want %q", payload.Data.Author, author)
+		}
+	})
+}
