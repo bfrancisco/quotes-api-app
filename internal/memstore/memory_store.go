@@ -1,45 +1,46 @@
-package quotes
+package memstore
 
 import (
 	"context"
 	"math/rand"
 	"time"
 
+	"github.com/bfrancisco/quotes-api-app/quotes"
 	"github.com/google/uuid"
 )
 
-type MemoryStore struct {
-	quotes map[string]Quote
+type memoryStore struct {
+	quotes map[string]quotes.Quote
 	ids    []string      // used to store the order of quote IDs for random selection.
 	newID  func() string // used to generate new IDs for quotes. Defaults to uuid.NewString if not provided.
 }
 
-func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{
-		quotes: make(map[string]Quote),
+func NewMemoryStore() quotes.Store {
+	return &memoryStore{
+		quotes: make(map[string]quotes.Quote),
 		ids:    make([]string, 0),
 		newID:  uuid.NewString,
 	}
 }
 
-func (s *MemoryStore) CreateQuote(ctx context.Context, quote QuoteCreateInput) (Quote, error) {
+func (s *memoryStore) CreateQuote(ctx context.Context, quote quotes.QuoteCreateInput) (quotes.Quote, error) {
 	id := s.newID()
-	newQuote := Quote{
+	newQuote := quotes.Quote{
 		ID:        id,
 		Text:      quote.Text,
 		Author:    quote.Author,
 		CreatedAt: time.Now(),
 	}
 	if _, exists := s.quotes[newQuote.ID]; exists {
-		return Quote{}, ErrQuoteAlreadyExists
+		return quotes.Quote{}, quotes.ErrQuoteAlreadyExists
 	}
 	s.ids = append(s.ids, newQuote.ID)
 	s.quotes[newQuote.ID] = newQuote
 	return newQuote, s.quotes[newQuote.ID].Validate()
 }
 
-func (s *MemoryStore) ListQuotes(ctx context.Context) ([]Quote, error) {
-	quotes := make([]Quote, 0, len(s.quotes))
+func (s *memoryStore) ListQuotes(ctx context.Context) ([]quotes.Quote, error) {
+	quotes := make([]quotes.Quote, 0, len(s.quotes))
 
 	for _, quote := range s.quotes {
 		quotes = append(quotes, quote)
@@ -49,18 +50,18 @@ func (s *MemoryStore) ListQuotes(ctx context.Context) ([]Quote, error) {
 }
 
 // O(1)
-func (s *MemoryStore) GetQuoteByID(ctx context.Context, id string) (Quote, error) {
+func (s *memoryStore) GetQuoteByID(ctx context.Context, id string) (quotes.Quote, error) {
 	quote, ok := s.quotes[id]
 	if !ok {
-		return Quote{}, ErrQuoteNotFound
+		return quotes.Quote{}, quotes.ErrQuoteNotFound
 	}
 
 	return quote, nil
 }
 
 // O(n). Can be optimized, but we don't expect this to be a common operation.
-func (s *MemoryStore) GetQuotesByAuthor(ctx context.Context, author string) ([]Quote, error) {
-	var results []Quote
+func (s *memoryStore) GetQuotesByAuthor(ctx context.Context, author string) ([]quotes.Quote, error) {
+	var results []quotes.Quote
 
 	for _, quote := range s.quotes {
 		if quote.Author == author {
@@ -72,28 +73,28 @@ func (s *MemoryStore) GetQuotesByAuthor(ctx context.Context, author string) ([]Q
 }
 
 // O(1)
-func (s *MemoryStore) GetRandomQuote(ctx context.Context) (Quote, error) {
+func (s *memoryStore) GetRandomQuote(ctx context.Context) (quotes.Quote, error) {
 	if len(s.ids) == 0 {
-		return Quote{}, ErrQuoteNotFound
+		return quotes.Quote{}, quotes.ErrQuoteNotFound
 	}
 
 	randomID := s.ids[rand.Intn(len(s.ids))]
 	quote, ok := s.quotes[randomID]
 	if !ok {
-		return Quote{}, ErrQuoteNotFound
+		return quotes.Quote{}, quotes.ErrQuoteNotFound
 	}
 
 	return quote, nil
 }
 
 // O(1)
-func (s *MemoryStore) UpdateQuote(ctx context.Context, quote QuoteUpdateInput) (Quote, error) {
+func (s *memoryStore) UpdateQuote(ctx context.Context, quote quotes.QuoteUpdateInput) (quotes.Quote, error) {
 	if err := quote.Validate(); err != nil {
-		return Quote{}, err
+		return quotes.Quote{}, err
 	}
 
 	if _, ok := s.quotes[quote.ID]; !ok {
-		return Quote{}, ErrQuoteNotFound
+		return quotes.Quote{}, quotes.ErrQuoteNotFound
 	}
 
 	updatedQuote := s.quotes[quote.ID]
@@ -105,7 +106,7 @@ func (s *MemoryStore) UpdateQuote(ctx context.Context, quote QuoteUpdateInput) (
 	}
 
 	if err := updatedQuote.Validate(); err != nil {
-		return Quote{}, err
+		return quotes.Quote{}, err
 	}
 
 	s.quotes[quote.ID] = updatedQuote
@@ -113,9 +114,9 @@ func (s *MemoryStore) UpdateQuote(ctx context.Context, quote QuoteUpdateInput) (
 }
 
 // O(n). Expensive to delete, but we don't expect this to be a common operation.
-func (s *MemoryStore) DeleteQuote(ctx context.Context, id string) error {
+func (s *memoryStore) DeleteQuote(ctx context.Context, id string) error {
 	if _, ok := s.quotes[id]; !ok {
-		return ErrQuoteNotFound
+		return quotes.ErrQuoteNotFound
 	}
 
 	delete(s.quotes, id)

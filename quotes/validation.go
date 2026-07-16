@@ -2,18 +2,20 @@ package quotes
 
 import (
 	"time"
+
+	"github.com/bfrancisco/quotes-api-app/internal/helpers"
 )
 
 func (q Quote) Validate() error {
-	if !isValidUUID(q.ID) {
+	if !helpers.IsValidUUID(q.ID) {
 		return ErrInvalidQuoteID
 	}
 
-	if isEmptyString(q.Text) {
+	if helpers.IsEmptyString(q.Text) {
 		return ErrInvalidQuoteText
 	}
 
-	if isEmptyString(q.Author) {
+	if helpers.IsEmptyString(q.Author) {
 		return ErrInvalidQuoteAuthor
 	}
 
@@ -25,11 +27,11 @@ func (q Quote) Validate() error {
 }
 
 func (q QuoteCreateInput) Validate() error {
-	if isEmptyString(q.Text) {
+	if helpers.IsEmptyString(q.Text) {
 		return ErrInvalidQuoteText
 	}
 
-	if isEmptyString(q.Author) {
+	if helpers.IsEmptyString(q.Author) {
 		return ErrInvalidQuoteAuthor
 	}
 
@@ -37,7 +39,7 @@ func (q QuoteCreateInput) Validate() error {
 }
 
 func (q QuoteUpdateInput) Validate() error {
-	if !isValidUUID(q.ID) {
+	if !helpers.IsValidUUID(q.ID) {
 		return ErrInvalidQuoteID
 	}
 
@@ -45,11 +47,11 @@ func (q QuoteUpdateInput) Validate() error {
 		return ErrNoFieldsToUpdate
 	}
 
-	if q.Text != nil && isEmptyString(*q.Text) {
+	if q.Text != nil && helpers.IsEmptyString(*q.Text) {
 		return ErrInvalidQuoteText
 	}
 
-	if q.Author != nil && isEmptyString(*q.Author) {
+	if q.Author != nil && helpers.IsEmptyString(*q.Author) {
 		return ErrInvalidQuoteAuthor
 	}
 

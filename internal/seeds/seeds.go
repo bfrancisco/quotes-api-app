@@ -1,10 +1,14 @@
-package quotes
+package seeds
 
-import "context"
+import (
+	"context"
+
+	"github.com/bfrancisco/quotes-api-app/quotes"
+)
 
 // SeedQuotes populates the store with an initial set of quotes for local testing.
-func SeedQuotes(store *MemoryStore) error {
-	inputs := []QuoteCreateInput{
+func SeedQuotes(store quotes.Store) error {
+	inputs := []quotes.QuoteCreateInput{
 		{Text: "Keep it simple, stupid.", Author: "Kelly Johnson"},
 		{Text: "Talk is cheap. Show me the code.", Author: "Linus Torvalds"},
 		{Text: "First, solve the problem. Then, write the code.", Author: "John Johnson"},

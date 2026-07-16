@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/bfrancisco/quotes-api-app/quotes"
+	"github.com/bfrancisco/quotes-api-app/internal/memstore"
 	"github.com/gin-gonic/gin"
 )
 
@@ -76,7 +76,7 @@ func createQuoteAndGetID(t *testing.T, router *gin.Engine, body string) string {
 func TestHealthEndpoint(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	store := quotes.NewMemoryStore()
+	store := memstore.NewMemoryStore()
 	handler := NewHandler(store)
 
 	router := gin.New()
@@ -138,7 +138,7 @@ func TestCreateQuoteEndpoint(t *testing.T) {
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			store := quotes.NewMemoryStore()
+			store := memstore.NewMemoryStore()
 			handler := NewHandler(store)
 
 			router := gin.New()
@@ -193,7 +193,7 @@ func TestGetQuotesEndpoint(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("returns 200 with empty list and default meta", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -229,7 +229,7 @@ func TestGetQuotesEndpoint(t *testing.T) {
 	})
 
 	t.Run("returns 200 and paginates with limit and offset", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -279,7 +279,7 @@ func TestGetQuotesEndpoint(t *testing.T) {
 	})
 
 	t.Run("returns 200 and filters by author", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -325,7 +325,7 @@ func TestGetQuotesEndpoint(t *testing.T) {
 	})
 
 	t.Run("returns 400 for invalid query params", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -355,7 +355,7 @@ func TestGetQuoteByIDEndpoint(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("returns 200 for existing quote", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -389,7 +389,7 @@ func TestGetQuoteByIDEndpoint(t *testing.T) {
 	})
 
 	t.Run("returns 400 for invalid quote id", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -414,7 +414,7 @@ func TestGetQuoteByIDEndpoint(t *testing.T) {
 	})
 
 	t.Run("returns 404 for non-existent quote", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -443,7 +443,7 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("returns 200 when updating text only", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -478,7 +478,7 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 	})
 
 	t.Run("returns 200 when updating author only", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -513,7 +513,7 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 	})
 
 	t.Run("returns 400 for invalid quote id", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -539,7 +539,7 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 	})
 
 	t.Run("returns 400 for invalid json body", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -565,7 +565,7 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 	})
 
 	t.Run("returns 400 for empty patch object", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -593,7 +593,7 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 	})
 
 	t.Run("returns 400 for invalid quote text", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -621,7 +621,7 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 	})
 
 	t.Run("returns 400 for invalid quote author", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -649,7 +649,7 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 	})
 
 	t.Run("returns 404 for non-existent quote", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -679,7 +679,7 @@ func TestDeleteQuoteEndpoint(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("returns 204 for existing quote and quote is no longer retrievable", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -717,7 +717,7 @@ func TestDeleteQuoteEndpoint(t *testing.T) {
 	})
 
 	t.Run("returns 400 for invalid quote id", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -742,7 +742,7 @@ func TestDeleteQuoteEndpoint(t *testing.T) {
 	})
 
 	t.Run("returns 404 for non-existent quote", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()
@@ -771,7 +771,7 @@ func TestGetRandomQuoteEndpoint(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("returns 200 with a random quote from the store", func(t *testing.T) {
-		store := quotes.NewMemoryStore()
+		store := memstore.NewMemoryStore()
 		handler := NewHandler(store)
 
 		router := gin.New()

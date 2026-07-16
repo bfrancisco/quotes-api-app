@@ -1,23 +1,25 @@
-package quotes
+package memstore
 
 import (
 	"context"
 	"errors"
 	"testing"
+
+	"github.com/bfrancisco/quotes-api-app/quotes"
 )
 
 func memoryStoreStringPtr(value string) *string {
 	return &value
 }
 
-func validCreateInput(author string) QuoteCreateInput {
-	return QuoteCreateInput{
+func validCreateInput(author string) quotes.QuoteCreateInput {
+	return quotes.QuoteCreateInput{
 		Text:   "Simplicity is prerequisite for reliability.",
 		Author: author,
 	}
 }
 
-func createQuoteAndReturnID(t *testing.T, ctx context.Context, store *MemoryStore, input QuoteCreateInput) string {
+func createQuoteAndReturnID(t *testing.T, ctx context.Context, store quotes.Store, input quotes.QuoteCreateInput) string {
 	t.Helper()
 
 	created, err := store.CreateQuote(ctx, input)
@@ -79,8 +81,8 @@ func TestMemoryStoreGetQuoteByIDNotFound(t *testing.T) {
 	store := NewMemoryStore()
 
 	_, err := store.GetQuoteByID(ctx, "11111111-1111-1111-1111-111111111111")
-	if !errors.Is(err, ErrQuoteNotFound) {
-		t.Fatalf("GetQuoteByID() error = %v, want %v", err, ErrQuoteNotFound)
+	if !errors.Is(err, quotes.ErrQuoteNotFound) {
+		t.Fatalf("GetQuoteByID() error = %v, want %v", err, quotes.ErrQuoteNotFound)
 	}
 }
 
@@ -102,7 +104,7 @@ func TestMemoryStoreListQuotes(t *testing.T) {
 		t.Fatalf("ListQuotes() length = %d, want 2", len(got))
 	}
 
-	gotByID := map[string]Quote{}
+	gotByID := map[string]quotes.Quote{}
 	for _, quote := range got {
 		gotByID[quote.ID] = quote
 	}
@@ -122,7 +124,7 @@ func TestMemoryStoreUpdateQuote(t *testing.T) {
 
 	createdID := createQuoteAndReturnID(t, ctx, store, original)
 
-	updated := QuoteUpdateInput{
+	updated := quotes.QuoteUpdateInput{
 		ID:     createdID,
 		Text:   memoryStoreStringPtr("Updated text"),
 		Author: memoryStoreStringPtr("Author B"),
@@ -146,13 +148,13 @@ func TestMemoryStoreUpdateQuoteNotFound(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryStore()
 
-	_, err := store.UpdateQuote(ctx, QuoteUpdateInput{
+	_, err := store.UpdateQuote(ctx, quotes.QuoteUpdateInput{
 		ID:     "11111111-1111-1111-1111-111111111111",
 		Text:   memoryStoreStringPtr("Simplicity is prerequisite for reliability."),
 		Author: memoryStoreStringPtr("Missing"),
 	})
-	if !errors.Is(err, ErrQuoteNotFound) {
-		t.Fatalf("UpdateQuote() error = %v, want %v", err, ErrQuoteNotFound)
+	if !errors.Is(err, quotes.ErrQuoteNotFound) {
+		t.Fatalf("UpdateQuote() error = %v, want %v", err, quotes.ErrQuoteNotFound)
 	}
 }
 
@@ -162,7 +164,7 @@ func TestMemoryStoreUpdateQuoteTextOnly(t *testing.T) {
 
 	createdID := createQuoteAndReturnID(t, ctx, store, validCreateInput("Author A"))
 
-	if _, err := store.UpdateQuote(ctx, QuoteUpdateInput{
+	if _, err := store.UpdateQuote(ctx, quotes.QuoteUpdateInput{
 		ID:   createdID,
 		Text: memoryStoreStringPtr("Updated text only"),
 	}); err != nil {
@@ -188,7 +190,7 @@ func TestMemoryStoreUpdateQuoteAuthorOnly(t *testing.T) {
 
 	createdID := createQuoteAndReturnID(t, ctx, store, validCreateInput("Author A"))
 
-	_, err := store.UpdateQuote(ctx, QuoteUpdateInput{
+	_, err := store.UpdateQuote(ctx, quotes.QuoteUpdateInput{
 		ID:     createdID,
 		Author: memoryStoreStringPtr("Author B"),
 	})
@@ -215,9 +217,9 @@ func TestMemoryStoreUpdateQuoteNoFieldsToUpdate(t *testing.T) {
 
 	createdID := createQuoteAndReturnID(t, ctx, store, validCreateInput("Author A"))
 
-	_, err := store.UpdateQuote(ctx, QuoteUpdateInput{ID: createdID})
-	if !errors.Is(err, ErrNoFieldsToUpdate) {
-		t.Fatalf("UpdateQuote() error = %v, want %v", err, ErrNoFieldsToUpdate)
+	_, err := store.UpdateQuote(ctx, quotes.QuoteUpdateInput{ID: createdID})
+	if !errors.Is(err, quotes.ErrNoFieldsToUpdate) {
+		t.Fatalf("UpdateQuote() error = %v, want %v", err, quotes.ErrNoFieldsToUpdate)
 	}
 
 	got, err := store.GetQuoteByID(ctx, createdID)
@@ -236,12 +238,12 @@ func TestMemoryStoreUpdateQuoteInvalidFieldDoesNotPersist(t *testing.T) {
 
 	createdID := createQuoteAndReturnID(t, ctx, store, validCreateInput("Author A"))
 
-	_, err := store.UpdateQuote(ctx, QuoteUpdateInput{
+	_, err := store.UpdateQuote(ctx, quotes.QuoteUpdateInput{
 		ID:   createdID,
 		Text: memoryStoreStringPtr(" "),
 	})
-	if !errors.Is(err, ErrInvalidQuoteText) {
-		t.Fatalf("UpdateQuote() error = %v, want %v", err, ErrInvalidQuoteText)
+	if !errors.Is(err, quotes.ErrInvalidQuoteText) {
+		t.Fatalf("UpdateQuote() error = %v, want %v", err, quotes.ErrInvalidQuoteText)
 	}
 
 	got, err := store.GetQuoteByID(ctx, createdID)
@@ -266,8 +268,8 @@ func TestMemoryStoreDeleteQuote(t *testing.T) {
 	}
 
 	_, err := store.GetQuoteByID(ctx, createdID)
-	if !errors.Is(err, ErrQuoteNotFound) {
-		t.Fatalf("GetQuoteByID() after delete error = %v, want %v", err, ErrQuoteNotFound)
+	if !errors.Is(err, quotes.ErrQuoteNotFound) {
+		t.Fatalf("GetQuoteByID() after delete error = %v, want %v", err, quotes.ErrQuoteNotFound)
 	}
 }
 
@@ -276,8 +278,8 @@ func TestMemoryStoreDeleteQuoteNotFound(t *testing.T) {
 	store := NewMemoryStore()
 
 	err := store.DeleteQuote(ctx, "11111111-1111-1111-1111-111111111111")
-	if !errors.Is(err, ErrQuoteNotFound) {
-		t.Fatalf("DeleteQuote() error = %v, want %v", err, ErrQuoteNotFound)
+	if !errors.Is(err, quotes.ErrQuoteNotFound) {
+		t.Fatalf("DeleteQuote() error = %v, want %v", err, quotes.ErrQuoteNotFound)
 	}
 }
 
@@ -288,7 +290,7 @@ func TestMemoryStoreGetQuotesByAuthor(t *testing.T) {
 	q2 := validCreateInput("Author A")
 	q3 := validCreateInput("Author B")
 
-	for _, quote := range []QuoteCreateInput{q1, q2, q3} {
+	for _, quote := range []quotes.QuoteCreateInput{q1, q2, q3} {
 		if _, err := store.CreateQuote(ctx, quote); err != nil {
 			t.Fatalf("CreateQuote() error = %v, want nil", err)
 		}
@@ -316,7 +318,7 @@ func TestMemoryStoreGetRandomQuote(t *testing.T) {
 	q1 := validCreateInput("Author A")
 	q2 := validCreateInput("Author B")
 
-	for _, quote := range []QuoteCreateInput{q1, q2} {
+	for _, quote := range []quotes.QuoteCreateInput{q1, q2} {
 		createQuoteAndReturnID(t, ctx, store, quote)
 	}
 
@@ -345,7 +347,7 @@ func TestMemoryStoreGetRandomQuoteEmptyStore(t *testing.T) {
 	store := NewMemoryStore()
 
 	_, err := store.GetRandomQuote(ctx)
-	if !errors.Is(err, ErrQuoteNotFound) {
-		t.Fatalf("GetRandomQuote() error = %v, want %v", err, ErrQuoteNotFound)
+	if !errors.Is(err, quotes.ErrQuoteNotFound) {
+		t.Fatalf("GetRandomQuote() error = %v, want %v", err, quotes.ErrQuoteNotFound)
 	}
 }

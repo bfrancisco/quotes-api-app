@@ -3,7 +3,8 @@ package main
 import (
 	"log"
 
-	"github.com/bfrancisco/quotes-api-app/quotes"
+	"github.com/bfrancisco/quotes-api-app/internal/memstore"
+	"github.com/bfrancisco/quotes-api-app/internal/seeds"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,8 +13,8 @@ func main() {
 	// store = quotes.NewFirestoreStore() // firestore implementation
 	// store = quotes.NewMemoryStore() // in-memory implementation. to replace with firestore implementation
 
-	store := quotes.NewMemoryStore() // in-memory implementation. to replace with firestore implementation
-	if err := quotes.SeedQuotes(store); err != nil {
+	store := memstore.NewMemoryStore() // in-memory implementation. to replace with firestore implementation
+	if err := seeds.SeedQuotes(store); err != nil {
 		log.Fatalf("failed to seed quotes: %v", err)
 	}
 	handler := NewHandler(store)

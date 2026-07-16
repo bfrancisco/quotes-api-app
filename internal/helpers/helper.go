@@ -1,4 +1,4 @@
-package quotes
+package helpers
 
 import (
 	"strings"
@@ -6,11 +6,11 @@ import (
 	"github.com/google/uuid"
 )
 
-func isEmptyString(input string) bool {
+func IsEmptyString(input string) bool {
 	return strings.TrimSpace(input) == ""
 }
 
-func isValidUUID(input string) bool {
+func IsValidUUID(input string) bool {
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" {
 		return false

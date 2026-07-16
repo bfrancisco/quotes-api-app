@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/bfrancisco/quotes-api-app/internal/helpers"
 	"github.com/bfrancisco/quotes-api-app/quotes"
-	"github.com/google/uuid"
 	"github.com/gin-gonic/gin"
 )
 
@@ -173,7 +173,7 @@ func (h *Handler) getQuotes(c *gin.Context) {
 
 func (h *Handler) getQuoteByID(c *gin.Context) {
 	id := c.Param("id")
-	if !isValidUUID(id) {
+	if !helpers.IsValidUUID(id) {
 		h.writeStoreError(c, quotes.ErrInvalidQuoteID)
 		return
 	}
@@ -203,7 +203,7 @@ func (h *Handler) getRandomQuote(c *gin.Context) {
 
 func (h *Handler) updateQuote(c *gin.Context) {
 	id := c.Param("id")
-	if !isValidUUID(id) {
+	if !helpers.IsValidUUID(id) {
 		h.writeStoreError(c, quotes.ErrInvalidQuoteID)
 		return
 	}
@@ -231,7 +231,7 @@ func (h *Handler) updateQuote(c *gin.Context) {
 
 func (h *Handler) deleteQuote(c *gin.Context) {
 	id := c.Param("id")
-	if !isValidUUID(id) {
+	if !helpers.IsValidUUID(id) {
 		h.writeStoreError(c, quotes.ErrInvalidQuoteID)
 		return
 	}
@@ -280,9 +280,4 @@ func toQuotePayload(quote quotes.Quote) quotePayload {
 		Author:    quote.Author,
 		CreatedAt: quote.CreatedAt,
 	}
-}
-
-func isValidUUID(value string) bool {
-	_, err := uuid.Parse(value)
-	return err == nil
 }
