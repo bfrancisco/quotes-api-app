@@ -45,6 +45,34 @@ type testQuoteListEnvelope struct {
 	} `json:"meta"`
 }
 
+const (
+	testValidQuoteID   = "550e8400-e29b-41d4-a716-446655440000"
+	testMissingQuoteID = "11111111-1111-1111-1111-111111111111"
+)
+
+func createQuoteAndGetID(t *testing.T, router *gin.Engine, body string) string {
+	t.Helper()
+
+	createReq := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(body))
+	createReq.Header.Set("Content-Type", "application/json")
+	createResp := httptest.NewRecorder()
+	router.ServeHTTP(createResp, createReq)
+	if createResp.Code != http.StatusCreated {
+		t.Fatalf("seed create status = %d, want %d", createResp.Code, http.StatusCreated)
+	}
+
+	var payload testQuoteEnvelope
+	if err := json.Unmarshal(createResp.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v", err)
+	}
+
+	if payload.Data.ID == "" {
+		t.Fatalf("created quote id = empty, want non-empty")
+	}
+
+	return payload.Data.ID
+}
+
 func TestHealthEndpoint(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -334,15 +362,9 @@ func TestGetQuoteByIDEndpoint(t *testing.T) {
 		v1 := router.Group("/v1")
 		handler.RegisterRoutes(v1)
 
-		createReq := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(`{"text":"One quote","author":"Author One"}`))
-		createReq.Header.Set("Content-Type", "application/json")
-		createResp := httptest.NewRecorder()
-		router.ServeHTTP(createResp, createReq)
-		if createResp.Code != http.StatusCreated {
-			t.Fatalf("seed create status = %d, want %d", createResp.Code, http.StatusCreated)
-		}
+		createdID := createQuoteAndGetID(t, router, `{"text":"One quote","author":"Author One"}`)
 
-		getReq := httptest.NewRequest(http.MethodGet, "/v1/quotes/1", nil)
+		getReq := httptest.NewRequest(http.MethodGet, "/v1/quotes/"+createdID, nil)
 		getResp := httptest.NewRecorder()
 		router.ServeHTTP(getResp, getReq)
 
@@ -355,8 +377,8 @@ func TestGetQuoteByIDEndpoint(t *testing.T) {
 			t.Fatalf("json.Unmarshal() error = %v", err)
 		}
 
-		if payload.Data.ID != "1" {
-			t.Fatalf("quote id = %q, want %q", payload.Data.ID, "1")
+		if payload.Data.ID != createdID {
+			t.Fatalf("quote id = %q, want %q", payload.Data.ID, createdID)
 		}
 		if payload.Data.Text != "One quote" {
 			t.Fatalf("quote text = %q, want %q", payload.Data.Text, "One quote")
@@ -374,7 +396,7 @@ func TestGetQuoteByIDEndpoint(t *testing.T) {
 		v1 := router.Group("/v1")
 		handler.RegisterRoutes(v1)
 
-		req := httptest.NewRequest(http.MethodGet, "/v1/quotes/abc", nil)
+		req := httptest.NewRequest(http.MethodGet, "/v1/quotes/not-a-uuid", nil)
 		resp := httptest.NewRecorder()
 		router.ServeHTTP(resp, req)
 
@@ -399,7 +421,7 @@ func TestGetQuoteByIDEndpoint(t *testing.T) {
 		v1 := router.Group("/v1")
 		handler.RegisterRoutes(v1)
 
-		req := httptest.NewRequest(http.MethodGet, "/v1/quotes/999", nil)
+		req := httptest.NewRequest(http.MethodGet, "/v1/quotes/"+testMissingQuoteID, nil)
 		resp := httptest.NewRecorder()
 		router.ServeHTTP(resp, req)
 
@@ -428,15 +450,9 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 		v1 := router.Group("/v1")
 		handler.RegisterRoutes(v1)
 
-		createReq := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(`{"text":"Original text","author":"Original author"}`))
-		createReq.Header.Set("Content-Type", "application/json")
-		createResp := httptest.NewRecorder()
-		router.ServeHTTP(createResp, createReq)
-		if createResp.Code != http.StatusCreated {
-			t.Fatalf("seed create status = %d, want %d", createResp.Code, http.StatusCreated)
-		}
+		createdID := createQuoteAndGetID(t, router, `{"text":"Original text","author":"Original author"}`)
 
-		updateReq := httptest.NewRequest(http.MethodPatch, "/v1/quotes/1", bytes.NewBufferString(`{"text":"Updated text"}`))
+		updateReq := httptest.NewRequest(http.MethodPatch, "/v1/quotes/"+createdID, bytes.NewBufferString(`{"text":"Updated text"}`))
 		updateReq.Header.Set("Content-Type", "application/json")
 		updateResp := httptest.NewRecorder()
 		router.ServeHTTP(updateResp, updateReq)
@@ -450,8 +466,8 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 			t.Fatalf("json.Unmarshal() error = %v", err)
 		}
 
-		if payload.Data.ID != "1" {
-			t.Fatalf("quote id = %q, want %q", payload.Data.ID, "1")
+		if payload.Data.ID != createdID {
+			t.Fatalf("quote id = %q, want %q", payload.Data.ID, createdID)
 		}
 		if payload.Data.Text != "Updated text" {
 			t.Fatalf("quote text = %q, want %q", payload.Data.Text, "Updated text")
@@ -469,15 +485,9 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 		v1 := router.Group("/v1")
 		handler.RegisterRoutes(v1)
 
-		createReq := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(`{"text":"Original text","author":"Original author"}`))
-		createReq.Header.Set("Content-Type", "application/json")
-		createResp := httptest.NewRecorder()
-		router.ServeHTTP(createResp, createReq)
-		if createResp.Code != http.StatusCreated {
-			t.Fatalf("seed create status = %d, want %d", createResp.Code, http.StatusCreated)
-		}
+		createdID := createQuoteAndGetID(t, router, `{"text":"Original text","author":"Original author"}`)
 
-		updateReq := httptest.NewRequest(http.MethodPatch, "/v1/quotes/1", bytes.NewBufferString(`{"author":"Updated author"}`))
+		updateReq := httptest.NewRequest(http.MethodPatch, "/v1/quotes/"+createdID, bytes.NewBufferString(`{"author":"Updated author"}`))
 		updateReq.Header.Set("Content-Type", "application/json")
 		updateResp := httptest.NewRecorder()
 		router.ServeHTTP(updateResp, updateReq)
@@ -491,8 +501,8 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 			t.Fatalf("json.Unmarshal() error = %v", err)
 		}
 
-		if payload.Data.ID != "1" {
-			t.Fatalf("quote id = %q, want %q", payload.Data.ID, "1")
+		if payload.Data.ID != createdID {
+			t.Fatalf("quote id = %q, want %q", payload.Data.ID, createdID)
 		}
 		if payload.Data.Text != "Original text" {
 			t.Fatalf("quote text = %q, want %q", payload.Data.Text, "Original text")
@@ -510,7 +520,7 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 		v1 := router.Group("/v1")
 		handler.RegisterRoutes(v1)
 
-		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/abc", bytes.NewBufferString(`{"text":"Updated text"}`))
+		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/not-a-uuid", bytes.NewBufferString(`{"text":"Updated text"}`))
 		req.Header.Set("Content-Type", "application/json")
 		resp := httptest.NewRecorder()
 		router.ServeHTTP(resp, req)
@@ -536,7 +546,7 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 		v1 := router.Group("/v1")
 		handler.RegisterRoutes(v1)
 
-		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/1", bytes.NewBufferString(`{"text":`))
+		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/"+testValidQuoteID, bytes.NewBufferString(`{"text":`))
 		req.Header.Set("Content-Type", "application/json")
 		resp := httptest.NewRecorder()
 		router.ServeHTTP(resp, req)
@@ -562,15 +572,9 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 		v1 := router.Group("/v1")
 		handler.RegisterRoutes(v1)
 
-		createReq := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(`{"text":"Original text","author":"Original author"}`))
-		createReq.Header.Set("Content-Type", "application/json")
-		createResp := httptest.NewRecorder()
-		router.ServeHTTP(createResp, createReq)
-		if createResp.Code != http.StatusCreated {
-			t.Fatalf("seed create status = %d, want %d", createResp.Code, http.StatusCreated)
-		}
+		createdID := createQuoteAndGetID(t, router, `{"text":"Original text","author":"Original author"}`)
 
-		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/1", bytes.NewBufferString(`{}`))
+		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/"+createdID, bytes.NewBufferString(`{}`))
 		req.Header.Set("Content-Type", "application/json")
 		resp := httptest.NewRecorder()
 		router.ServeHTTP(resp, req)
@@ -596,15 +600,9 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 		v1 := router.Group("/v1")
 		handler.RegisterRoutes(v1)
 
-		createReq := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(`{"text":"Original text","author":"Original author"}`))
-		createReq.Header.Set("Content-Type", "application/json")
-		createResp := httptest.NewRecorder()
-		router.ServeHTTP(createResp, createReq)
-		if createResp.Code != http.StatusCreated {
-			t.Fatalf("seed create status = %d, want %d", createResp.Code, http.StatusCreated)
-		}
+		createdID := createQuoteAndGetID(t, router, `{"text":"Original text","author":"Original author"}`)
 
-		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/1", bytes.NewBufferString(`{"text":" "}`))
+		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/"+createdID, bytes.NewBufferString(`{"text":" "}`))
 		req.Header.Set("Content-Type", "application/json")
 		resp := httptest.NewRecorder()
 		router.ServeHTTP(resp, req)
@@ -630,15 +628,9 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 		v1 := router.Group("/v1")
 		handler.RegisterRoutes(v1)
 
-		createReq := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(`{"text":"Original text","author":"Original author"}`))
-		createReq.Header.Set("Content-Type", "application/json")
-		createResp := httptest.NewRecorder()
-		router.ServeHTTP(createResp, createReq)
-		if createResp.Code != http.StatusCreated {
-			t.Fatalf("seed create status = %d, want %d", createResp.Code, http.StatusCreated)
-		}
+		createdID := createQuoteAndGetID(t, router, `{"text":"Original text","author":"Original author"}`)
 
-		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/1", bytes.NewBufferString(`{"author":" "}`))
+		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/"+createdID, bytes.NewBufferString(`{"author":" "}`))
 		req.Header.Set("Content-Type", "application/json")
 		resp := httptest.NewRecorder()
 		router.ServeHTTP(resp, req)
@@ -664,7 +656,7 @@ func TestUpdateQuoteEndpoint(t *testing.T) {
 		v1 := router.Group("/v1")
 		handler.RegisterRoutes(v1)
 
-		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/999", bytes.NewBufferString(`{"text":"Updated text"}`))
+		req := httptest.NewRequest(http.MethodPatch, "/v1/quotes/"+testMissingQuoteID, bytes.NewBufferString(`{"text":"Updated text"}`))
 		req.Header.Set("Content-Type", "application/json")
 		resp := httptest.NewRecorder()
 		router.ServeHTTP(resp, req)
@@ -694,15 +686,9 @@ func TestDeleteQuoteEndpoint(t *testing.T) {
 		v1 := router.Group("/v1")
 		handler.RegisterRoutes(v1)
 
-		createReq := httptest.NewRequest(http.MethodPost, "/v1/quotes", bytes.NewBufferString(`{"text":"One quote","author":"Author One"}`))
-		createReq.Header.Set("Content-Type", "application/json")
-		createResp := httptest.NewRecorder()
-		router.ServeHTTP(createResp, createReq)
-		if createResp.Code != http.StatusCreated {
-			t.Fatalf("seed create status = %d, want %d", createResp.Code, http.StatusCreated)
-		}
+		createdID := createQuoteAndGetID(t, router, `{"text":"One quote","author":"Author One"}`)
 
-		deleteReq := httptest.NewRequest(http.MethodDelete, "/v1/quotes/1", nil)
+		deleteReq := httptest.NewRequest(http.MethodDelete, "/v1/quotes/"+createdID, nil)
 		deleteResp := httptest.NewRecorder()
 		router.ServeHTTP(deleteResp, deleteReq)
 
@@ -713,7 +699,7 @@ func TestDeleteQuoteEndpoint(t *testing.T) {
 			t.Fatalf("response body length = %d, want 0", deleteResp.Body.Len())
 		}
 
-		getReq := httptest.NewRequest(http.MethodGet, "/v1/quotes/1", nil)
+		getReq := httptest.NewRequest(http.MethodGet, "/v1/quotes/"+createdID, nil)
 		getResp := httptest.NewRecorder()
 		router.ServeHTTP(getResp, getReq)
 
@@ -738,7 +724,7 @@ func TestDeleteQuoteEndpoint(t *testing.T) {
 		v1 := router.Group("/v1")
 		handler.RegisterRoutes(v1)
 
-		req := httptest.NewRequest(http.MethodDelete, "/v1/quotes/abc", nil)
+		req := httptest.NewRequest(http.MethodDelete, "/v1/quotes/not-a-uuid", nil)
 		resp := httptest.NewRecorder()
 		router.ServeHTTP(resp, req)
 
@@ -763,7 +749,7 @@ func TestDeleteQuoteEndpoint(t *testing.T) {
 		v1 := router.Group("/v1")
 		handler.RegisterRoutes(v1)
 
-		req := httptest.NewRequest(http.MethodDelete, "/v1/quotes/999", nil)
+		req := httptest.NewRequest(http.MethodDelete, "/v1/quotes/"+testMissingQuoteID, nil)
 		resp := httptest.NewRecorder()
 		router.ServeHTTP(resp, req)
 

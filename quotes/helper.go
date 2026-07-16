@@ -1,16 +1,21 @@
 package quotes
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/google/uuid"
+)
 
 func isEmptyString(input string) bool {
 	return strings.TrimSpace(input) == ""
 }
 
-func isNumeric(input string) bool {
-	for _, char := range strings.TrimSpace(input) {
-		if char < '0' || char > '9' {
-			return false
-		}
+func isValidUUID(input string) bool {
+	trimmed := strings.TrimSpace(input)
+	if trimmed == "" {
+		return false
 	}
-	return true
+
+	_, err := uuid.Parse(trimmed)
+	return err == nil
 }

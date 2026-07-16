@@ -3,10 +3,10 @@ package main
 import (
 	"errors"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/bfrancisco/quotes-api-app/quotes"
+	"github.com/google/uuid"
 	"github.com/gin-gonic/gin"
 )
 
@@ -173,7 +173,7 @@ func (h *Handler) getQuotes(c *gin.Context) {
 
 func (h *Handler) getQuoteByID(c *gin.Context) {
 	id := c.Param("id")
-	if !isNumericID(id) {
+	if !isValidUUID(id) {
 		h.writeStoreError(c, quotes.ErrInvalidQuoteID)
 		return
 	}
@@ -203,7 +203,7 @@ func (h *Handler) getRandomQuote(c *gin.Context) {
 
 func (h *Handler) updateQuote(c *gin.Context) {
 	id := c.Param("id")
-	if !isNumericID(id) {
+	if !isValidUUID(id) {
 		h.writeStoreError(c, quotes.ErrInvalidQuoteID)
 		return
 	}
@@ -231,7 +231,7 @@ func (h *Handler) updateQuote(c *gin.Context) {
 
 func (h *Handler) deleteQuote(c *gin.Context) {
 	id := c.Param("id")
-	if !isNumericID(id) {
+	if !isValidUUID(id) {
 		h.writeStoreError(c, quotes.ErrInvalidQuoteID)
 		return
 	}
@@ -282,17 +282,7 @@ func toQuotePayload(quote quotes.Quote) quotePayload {
 	}
 }
 
-func isNumericID(value string) bool {
-	trimmed := strings.TrimSpace(value)
-	if trimmed == "" {
-		return false
-	}
-
-	for _, ch := range trimmed {
-		if ch < '0' || ch > '9' {
-			return false
-		}
-	}
-
-	return true
+func isValidUUID(value string) bool {
+	_, err := uuid.Parse(value)
+	return err == nil
 }

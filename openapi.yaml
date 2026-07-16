@@ -104,7 +104,7 @@ paths:
               description: URL of the created quote resource
               schema:
                 type: string
-                example: /v1/quotes/1
+                example: /v1/quotes/550e8400-e29b-41d4-a716-446655440000
           content:
             application/json:
               schema:
@@ -210,11 +210,11 @@ components:
       in: path
       name: id
       required: true
-      description: Quote identifier (numeric string)
+      description: Quote identifier (UUID string)
       schema:
         type: string
-        pattern: '^[0-9]+$'
-        examples: ["1"]
+        format: uuid
+        example: 550e8400-e29b-41d4-a716-446655440000
 
   responses:
     BadRequest:
@@ -281,8 +281,8 @@ components:
       properties:
         id:
           type: string
-          pattern: '^[0-9]+$'
-          example: "1"
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
         text:
           type: string
           minLength: 1

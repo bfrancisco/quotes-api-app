@@ -2,28 +2,28 @@ package quotes
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type MemoryStore struct {
 	quotes map[string]Quote
-	ids    []string // used to store the order of quote IDs for random selection.
-	maxID  int
+	ids    []string      // used to store the order of quote IDs for random selection.
+	newID  func() string // used to generate new IDs for quotes. Defaults to uuid.NewString if not provided.
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
 		quotes: make(map[string]Quote),
 		ids:    make([]string, 0),
-		maxID:  0, // first quote will have ID "1". Doesn't decrement on delete.
+		newID:  uuid.NewString,
 	}
 }
 
 func (s *MemoryStore) CreateQuote(ctx context.Context, quote QuoteCreateInput) (Quote, error) {
-	s.maxID++
-	id := fmt.Sprintf("%d", s.maxID)
+	id := s.newID()
 	newQuote := Quote{
 		ID:        id,
 		Text:      quote.Text,

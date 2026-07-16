@@ -54,7 +54,7 @@ curl.exe -X POST "%BASE_URL%/quotes" ^
 Get quote by ID:
 
 ```cmd
-curl.exe "%BASE_URL%/quotes/1"
+curl.exe "%BASE_URL%/quotes/550e8400-e29b-41d4-a716-446655440000"
 ```
 
 Get a random quote:
@@ -66,7 +66,7 @@ curl.exe "%BASE_URL%/quotes/random"
 Update only the text:
 
 ```cmd
-curl.exe -X PATCH "%BASE_URL%/quotes/1" ^
+curl.exe -X PATCH "%BASE_URL%/quotes/550e8400-e29b-41d4-a716-446655440000" ^
   -H "Content-Type: application/json" ^
   -d "{\"text\":\"Simplicity is a prerequisite for reliability.\"}"
 ```
@@ -74,7 +74,7 @@ curl.exe -X PATCH "%BASE_URL%/quotes/1" ^
 Update only the author:
 
 ```cmd
-curl.exe -X PATCH "%BASE_URL%/quotes/1" ^
+curl.exe -X PATCH "%BASE_URL%/quotes/550e8400-e29b-41d4-a716-446655440000" ^
   -H "Content-Type: application/json" ^
   -d "{\"author\":\"Edsger Dijkstra\"}"
 ```
@@ -82,7 +82,7 @@ curl.exe -X PATCH "%BASE_URL%/quotes/1" ^
 Delete a quote:
 
 ```cmd
-curl.exe -i -X DELETE "%BASE_URL%/quotes/1"
+curl.exe -i -X DELETE "%BASE_URL%/quotes/550e8400-e29b-41d4-a716-446655440000"
 ```
 
 ## Error Checks
@@ -90,7 +90,7 @@ curl.exe -i -X DELETE "%BASE_URL%/quotes/1"
 Get a quote with an invalid ID:
 
 ```cmd
-curl.exe "%BASE_URL%/quotes/not-a-number"
+curl.exe "%BASE_URL%/quotes/not-a-uuid"
 ```
 
 Create a quote with invalid text:
@@ -104,7 +104,7 @@ curl.exe -X POST "%BASE_URL%/quotes" ^
 Patch with no fields to update:
 
 ```cmd
-curl.exe -X PATCH "%BASE_URL%/quotes/1" ^
+curl.exe -X PATCH "%BASE_URL%/quotes/550e8400-e29b-41d4-a716-446655440000" ^
   -H "Content-Type: application/json" ^
   -d "{}"
 ```
@@ -122,7 +122,7 @@ Run the commands in this order on a fresh server:
 1. `curl.exe "%BASE_URL%/health"`
 2. `curl.exe "%BASE_URL%/quotes"`
 3. Create a quote with `POST /quotes`
-4. `GET /quotes/1`
+4. `GET /quotes/{uuid}`
 5. `GET /quotes/random`
-6. `PATCH /quotes/1`
-7. `DELETE /quotes/1`
+6. `PATCH /quotes/{uuid}`
+7. `DELETE /quotes/{uuid}`

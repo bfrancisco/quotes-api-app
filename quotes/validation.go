@@ -5,7 +5,7 @@ import (
 )
 
 func (q Quote) Validate() error {
-	if isEmptyString(q.ID) || !isNumeric(q.ID) {
+	if !isValidUUID(q.ID) {
 		return ErrInvalidQuoteID
 	}
 
@@ -37,7 +37,7 @@ func (q QuoteCreateInput) Validate() error {
 }
 
 func (q QuoteUpdateInput) Validate() error {
-	if isEmptyString(q.ID) || !isNumeric(q.ID) {
+	if !isValidUUID(q.ID) {
 		return ErrInvalidQuoteID
 	}
 
