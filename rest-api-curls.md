@@ -6,7 +6,7 @@ Use these commands on cmd.
 ## Start the API
 
 ```cmd
-go run ./rest-api
+go run ./cmd/rest-api
 ```
 
 Base URL:
@@ -15,7 +15,7 @@ Base URL:
 set BASE_URL=http://localhost:8080/v1
 ```
 
-The running server starts with an empty in-memory store. Create a quote before testing data-dependent read, update, and delete requests.
+The server starts with seeded in-memory quotes. Create a quote and use the returned `data.id` value for the data-dependent get, update, and delete requests below.
 
 ## Happy Path
 
@@ -25,7 +25,7 @@ Health check:
 curl.exe "%BASE_URL%/health"
 ```
 
-List quotes from an empty store:
+List seeded quotes:
 
 ```cmd
 curl.exe "%BASE_URL%/quotes"

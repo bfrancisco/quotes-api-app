@@ -3,12 +3,13 @@ package seeds
 import (
 	"context"
 
-	"github.com/bfrancisco/quotes-api-app/quotes"
+	"github.com/bfrancisco/quotes-api-app/internal/model"
+	"github.com/bfrancisco/quotes-api-app/internal/service"
 )
 
-// SeedQuotes populates the store with an initial set of quotes for local testing.
-func SeedQuotes(store quotes.Store) error {
-	inputs := []quotes.QuoteCreateInput{
+// SeedQuotes populates the quote service with an initial set of quotes for local testing.
+func SeedQuotes(service *service.QuoteService) error {
+	inputs := []model.QuoteCreateInput{
 		{Text: "Keep it simple, stupid.", Author: "Kelly Johnson"},
 		{Text: "Talk is cheap. Show me the code.", Author: "Linus Torvalds"},
 		{Text: "First, solve the problem. Then, write the code.", Author: "John Johnson"},
@@ -22,7 +23,7 @@ func SeedQuotes(store quotes.Store) error {
 	}
 
 	for _, input := range inputs {
-		if _, err := store.CreateQuote(context.Background(), input); err != nil {
+		if _, err := service.CreateQuote(context.Background(), input); err != nil {
 			return err
 		}
 	}

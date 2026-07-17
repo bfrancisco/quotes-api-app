@@ -1,4 +1,4 @@
-package quotes
+package model
 
 import "time"
 

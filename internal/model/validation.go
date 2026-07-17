@@ -1,4 +1,4 @@
-package quotes
+package model
 
 import (
 	"time"
@@ -54,8 +54,6 @@ func (q QuoteUpdateInput) Validate() error {
 	if q.Author != nil && helpers.IsEmptyString(*q.Author) {
 		return ErrInvalidQuoteAuthor
 	}
-
-	// Quote existence validation done in store layer.
 
 	return nil
 }
