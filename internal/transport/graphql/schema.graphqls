@@ -1,0 +1,43 @@
+scalar DateTime
+
+type Quote {
+  id: ID!
+  text: String!
+  author: String!
+  createdAt: DateTime!
+}
+
+type QuotePage {
+  quotes: [Quote!]!
+  count: Int!
+  limit: Int!
+  offset: Int!
+}
+
+type HealthStatus {
+  status: String!
+}
+
+input CreateQuoteInput {
+  text: String!
+  author: String!
+}
+
+"""Optional values to change on an existing quote; provide at least one field."""
+input UpdateQuoteInput {
+  text: String
+  author: String
+}
+
+type Query {
+  health: HealthStatus!
+  quote(id: ID!): Quote!
+  quotes(author: String, limit: Int, offset: Int): QuotePage!
+  randomQuote: Quote!
+}
+
+type Mutation {
+  createQuote(input: CreateQuoteInput!): Quote!
+  updateQuote(id: ID!, input: UpdateQuoteInput!): Quote!
+  deleteQuote(id: ID!): Boolean!
+}

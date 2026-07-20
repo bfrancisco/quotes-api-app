@@ -1,6 +1,6 @@
 # Quotes API Benchmark
 
-A Go learning project that will compare REST and GraphQL implementations of the same Quotes API. It currently provides a layered REST API backed by in-memory storage. GraphQL, persistent storage, containers, and benchmarking are future milestones.
+A Go learning project that compares REST and GraphQL implementations of the same Quotes API. It provides layered REST and gqlgen GraphQL APIs backed by independent in-memory stores. Persistent storage, containers, and benchmarking are future milestones.
 
 ## To-do
 
@@ -10,7 +10,7 @@ A Go learning project that will compare REST and GraphQL implementations of the 
 - [x] Add seeded, concurrency-safe in-memory storage.
 - [x] Implement quote create, list/filter/paginate, get, random, partial update, and delete use cases.
 - [x] Add model, service, storage, and REST transport tests.
-- [ ] Add a GraphQL API with gqlgen that calls `QuoteService`.
+- [x] Add a GraphQL API with gqlgen that calls `QuoteService`.
 - [ ] Implement a Firestore repository adapter.
 - [ ] Build a browser benchmark frontend for REST and GraphQL.
 - [ ] Add Dockerfiles and Docker Compose.
@@ -30,7 +30,7 @@ A Go learning project that will compare REST and GraphQL implementations of the 
 The current request flow is:
 
 ```text
-REST handlers / future GraphQL resolvers
+REST handlers / GraphQL resolvers
                 ↓
              services
                 ↓
@@ -51,13 +51,14 @@ Models are shared by the service and repository boundaries. They do not depend o
 | Models | Define quote data, input types, and domain errors | Transport and storage technologies |
 | Storage | Implement repository interfaces for a concrete data source | Gin and GraphQL packages |
 
-This separation lets REST handlers and future GraphQL resolvers use the same `QuoteService`. Adding Firestore should only require a new storage adapter that implements the repository interface.
+This separation lets REST handlers and GraphQL resolvers use the same `QuoteService`. Adding Firestore should only require a new storage adapter that implements the repository interface.
 
 ## Project Structure
 
 ```text
 quotes-api-app/
 ├── cmd/
+│   ├── graphql-api/                # GraphQL composition root and server startup
 │   └── rest-api/                   # REST composition root and server startup
 ├── internal/
 │   ├── model/                      # Quote entity, inputs, validation, domain errors
@@ -66,10 +67,12 @@ quotes-api-app/
 │   ├── storage/
 │   │   └── memory/                 # In-memory repository adapter
 │   ├── transport/
+│   │   ├── graphql/                # gqlgen schema, resolvers, error mapping, transport tests
 │   │   └── rest/                   # Gin router, handlers, REST DTOs, transport tests
 │   ├── seeds/                      # Seed data and initialization
 │   └── helpers/                    # Shared string and UUID helpers
 ├── openapi.yaml                    # REST API contract
+├── gqlgen.yml                      # gqlgen generation configuration
 ├── rest-api-curls.md               # REST request examples
 ├── go.mod
 └── README.md
@@ -99,7 +102,7 @@ A quote is created with text and author. Updates use partial-update semantics:
 - Go 1.26.4 or later.
 - `curl`, Postman, or another HTTP client.
 
-Docker, Firebase, and Apollo tooling are not required for the current REST-only phase.
+Docker, Firebase, and Apollo tooling are not required.
 
 ### Run the REST API
 
@@ -115,6 +118,30 @@ http://localhost:8080
 ```
 
 The server initializes the in-memory store with seed data on startup. Restarting the server resets all changes.
+
+### Run the GraphQL API
+
+```bash
+go mod tidy
+go run ./cmd/graphql-api
+```
+
+The GraphQL server starts on port `8081` with these endpoints:
+
+| URL | Description |
+|---|---|
+| `http://localhost:8081/` | GraphiQL playground for interactive operations |
+| `http://localhost:8081/query` | GraphQL HTTP endpoint |
+
+Like the REST API, the GraphQL server has its own seeded in-memory store. Restarting either process resets only that process's data.
+
+### Regenerate GraphQL Code
+
+After editing [internal/transport/graphql/schema.graphqls](internal/transport/graphql/schema.graphqls), regenerate gqlgen artifacts from the repository root:
+
+```bash
+go run github.com/99designs/gqlgen generate
+```
 
 ### Run the Tests
 
@@ -186,10 +213,9 @@ By completing this project, a junior engineer should be able to demonstrate:
 
 ## Notes for Beginners
 
-The REST application core is complete. The recommended next sequence is:
+The REST and GraphQL application cores are complete. The recommended next sequence is:
 
-1. Keep the current REST contract stable.
-2. Add and test a GraphQL transport that uses the same services.
-3. Add benchmark tooling.
-4. Replace or supplement memory storage with Firestore.
-5. Add Docker, deploy, and connect GraphQL tooling.
+1. Keep the REST and GraphQL contracts stable.
+2. Add benchmark tooling.
+3. Replace or supplement memory storage with Firestore.
+4. Add Docker, deploy, and connect GraphQL tooling.
