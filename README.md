@@ -200,8 +200,6 @@ See [rest-api-curls.md](rest-api-curls.md) for more request examples and [openap
 
 ## Learning Outcomes
 
-By completing this project, a junior engineer should be able to demonstrate:
-
 - Writing and testing REST APIs in Go.
 - Applying handlers → services → repositories → storage layering.
 - Designing application boundaries around interfaces.
@@ -211,11 +209,3 @@ By completing this project, a junior engineer should be able to demonstrate:
 - Measuring API behavior from a browser client.
 - Packaging and deploying independently runnable API services.
 
-## Notes for Beginners
-
-The REST and GraphQL application cores are complete. The recommended next sequence is:
-
-1. Keep the REST and GraphQL contracts stable.
-2. Add benchmark tooling.
-3. Replace or supplement memory storage with Firestore.
-4. Add Docker, deploy, and connect GraphQL tooling.

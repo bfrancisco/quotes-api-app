@@ -21,7 +21,7 @@
 - TestRepositoryFiltersAndSelectsRandomQuote: author filter and random quote retrieval behavior.
 - TestRepositorySupportsConcurrentAccess: concurrent create behavior and resulting count consistency.
 
-### Transport Layer: Shared Contract Suite
+### Transport Layer (Shared Contract Suite)
 - File: `internal/transport/testsuite/quote_transport_suite.go`
 - TestHealthAndQuoteLifecycle: shared lifecycle contract for both REST and GraphQL harnesses.
 - TestCommonErrorCodes:
