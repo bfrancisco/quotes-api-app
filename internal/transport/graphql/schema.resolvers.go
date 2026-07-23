@@ -8,7 +8,7 @@ package graphql
 import (
 	"context"
 
-	"github.com/bfrancisco/quotes-api-app/internal/model"
+	"github.com/bfrancisco/quotes-api-app/internal/quotes/model"
 	"github.com/bfrancisco/quotes-api-app/internal/service"
 	"github.com/bfrancisco/quotes-api-app/internal/transport/graphql/generated"
 )
