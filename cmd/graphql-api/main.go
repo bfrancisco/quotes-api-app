@@ -6,7 +6,7 @@ import (
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/bfrancisco/quotes-api-app/internal/seeds"
+	"github.com/bfrancisco/quotes-api-app/internal/quotes/seeds"
 	"github.com/bfrancisco/quotes-api-app/internal/service"
 	"github.com/bfrancisco/quotes-api-app/internal/storage/memory"
 	graphqltransport "github.com/bfrancisco/quotes-api-app/internal/transport/graphql"

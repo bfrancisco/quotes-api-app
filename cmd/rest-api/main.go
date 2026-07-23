@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/bfrancisco/quotes-api-app/internal/seeds"
+	"github.com/bfrancisco/quotes-api-app/internal/quotes/seeds"
 	"github.com/bfrancisco/quotes-api-app/internal/service"
 	"github.com/bfrancisco/quotes-api-app/internal/storage/memory"
 	resttransport "github.com/bfrancisco/quotes-api-app/internal/transport/rest"
