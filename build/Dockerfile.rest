@@ -1,0 +1,26 @@
+FROM golang:1.26.4-alpine AS builder
+
+WORKDIR /
+
+COPY go.mod go.sum ./
+
+RUN go mod download
+
+COPY . .
+
+# Build a Linux static executable from the REST composition root.
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/rest-api ./cmd/rest-api
+
+# Stage 2: runtime image; does not include the Go compiler or source code.
+FROM alpine:3.22
+
+# Certificates are a safe runtime dependency for HTTPS connections.
+RUN apk add --no-cache ca-certificates
+
+# Copy only the compiled executable from the builder stage.
+COPY --from=builder /out/rest-api /usr/local/bin/rest-api
+
+# Documents that the application listens on this container port.
+EXPOSE 8080
+
+CMD ["/usr/local/bin/rest-api"]
