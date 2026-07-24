@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bfrancisco/quotes-api-app/internal/quotes/model"
+	"github.com/bfrancisco/quotes-api-app/internal/model"
 	"github.com/bfrancisco/quotes-api-app/internal/repository"
 	"github.com/google/uuid"
 )

@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/bfrancisco/quotes-api-app/internal/quotes/model"
+	"github.com/bfrancisco/quotes-api-app/internal/model"
 )
 
 // QuoteRepository defines the persistence operations required by quote use cases.

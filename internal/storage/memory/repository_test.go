@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/bfrancisco/quotes-api-app/internal/quotes/model"
+	"github.com/bfrancisco/quotes-api-app/internal/model"
 	"github.com/bfrancisco/quotes-api-app/internal/storage/memory"
 )
 

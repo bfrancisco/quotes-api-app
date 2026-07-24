@@ -21,4 +21,4 @@ models:
       - github.com/99designs/gqlgen/graphql.Time
   Quote:
     model:
-      - github.com/bfrancisco/quotes-api-app/internal/quotes/model.Quote
+      - github.com/bfrancisco/quotes-api-app/internal/model.Quote

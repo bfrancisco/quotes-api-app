@@ -3,7 +3,7 @@
 package generated
 
 import (
-	"github.com/bfrancisco/quotes-api-app/internal/quotes/model"
+	"github.com/bfrancisco/quotes-api-app/internal/model"
 )
 
 type CreateQuoteInput struct {
