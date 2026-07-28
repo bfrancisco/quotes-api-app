@@ -11,9 +11,9 @@ A Go learning project that compares REST and GraphQL implementations of the same
 - [x] Implement quote create, list/filter/paginate, get, random, partial update, and delete use cases.
 - [x] Add model, service, storage, and REST transport tests.
 - [x] Add a GraphQL API with gqlgen that calls `QuoteService`.
-- [ ] Implement a Firestore repository adapter.
+- [x] Implement a Firestore repository adapter.
+- [x] Add Dockerfiles.
 - [ ] Build a browser benchmark frontend for REST and GraphQL.
-- [ ] Add Dockerfiles and Docker Compose.
 - [ ] Deploy the APIs and connect GraphQL to Apollo GraphOS / Apollo Studio.
 
 ## Project Goals
@@ -104,11 +104,40 @@ A quote is created with text and author. Updates use partial-update semantics:
 
 Docker, Firebase, and Apollo tooling are not required.
 
+### Runtime Configuration
+
+The APIs read configuration from **process environment variables**. Go does not automatically load a `.env` file, so either export variables in the shell or place them before the `go run` command.
+
+For a seeded local memory store:
+
+```bash
+SEED_QUOTES=true STORAGE_MODE=memory go run ./cmd/rest-api
+```
+
+Alternatively, export values once for the current shell session:
+
+```bash
+export SEED_QUOTES=true
+export STORAGE_MODE=memory
+go run ./cmd/rest-api
+```
+
+| Variable | Local default | Purpose |
+|---|---|---|
+| `PORT` | `8080` REST; `8081` GraphQL | HTTP port. Cloud Run supplies this automatically. |
+| `STORAGE_MODE` | `memory` | Selects `memory` for local use or `firestore` for persistent storage. |
+| `SEED_QUOTES` | `false` | Set to `true` only to load local memory sample quotes. |
+| `FIRESTORE_PROJECT_ID` | — | Required when `STORAGE_MODE=firestore`. |
+| `FIRESTORE_DATABASE_ID` | default database | Optional non-default Firestore database ID. |
+| `FIRESTORE_COLLECTION` | `quotes` | Firestore collection name. |
+
+For Cloud Run, configure these values on the Cloud Run service rather than using a `.env` file. Do not commit credentials or secrets in `.env`; add that file to `.gitignore` if you use one locally.
+
 ### Run the REST API
 
 ```bash
 go mod tidy
-go run ./cmd/rest-api
+SEED_QUOTES=true go run ./cmd/rest-api
 ```
 
 The API starts at:
@@ -117,13 +146,13 @@ The API starts at:
 http://localhost:8080
 ```
 
-The server initializes the in-memory store with seed data on startup. Restarting the server resets all changes.
+The server uses an in-memory store by default. With `SEED_QUOTES=true`, it loads sample data on startup; restarting the server resets all changes.
 
 ### Run the GraphQL API
 
 ```bash
 go mod tidy
-go run ./cmd/graphql-api
+SEED_QUOTES=true go run ./cmd/graphql-api
 ```
 
 The GraphQL server starts on port `8081` with these endpoints:
@@ -133,7 +162,7 @@ The GraphQL server starts on port `8081` with these endpoints:
 | `http://localhost:8081/` | GraphiQL playground for interactive operations |
 | `http://localhost:8081/query` | GraphQL HTTP endpoint |
 
-Like the REST API, the GraphQL server has its own seeded in-memory store. Restarting either process resets only that process's data.
+Like the REST API, the GraphQL server has its own in-memory store. With `SEED_QUOTES=true`, it loads sample data; restarting either process resets only that process's data.
 
 ### Regenerate GraphQL Code
 
