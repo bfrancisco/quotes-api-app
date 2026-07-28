@@ -2,7 +2,7 @@ package memory
 
 import (
 	"context"
-	"math/rand"
+	"math/rand/v2"
 	"sync"
 	"time"
 
@@ -96,7 +96,7 @@ func (r *InMemoryRepository) GetRandomQuote(_ context.Context) (model.Quote, err
 	if len(r.ids) == 0 {
 		return model.Quote{}, model.ErrQuoteNotFound
 	}
-	return r.quotes[r.ids[rand.Intn(len(r.ids))]], nil
+	return r.quotes[r.ids[rand.IntN(len(r.ids))]], nil
 }
 
 func (r *InMemoryRepository) UpdateQuote(_ context.Context, input model.QuoteUpdateInput) (model.Quote, error) {
