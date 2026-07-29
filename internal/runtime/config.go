@@ -34,7 +34,7 @@ func LoadConfig(defaultPort string) (Config, error) {
 		SeedQuotes:          parseBoolOrDefault("SEED_QUOTES", false),
 		
 	}
-	fmt.Printf("SEED_QUOTES raw: %q\n", os.Getenv("SEED_QUOTES"))
+
 	if config.Port == "" {
 		return Config{}, fmt.Errorf("PORT must not be empty")
 	}

@@ -177,6 +177,9 @@ func (h *Handler) deleteQuote(c *gin.Context) {
 }
 
 func (h *Handler) writeServiceError(c *gin.Context, err error) {
+	if err == nil {
+		return
+	}
 	switch {
 	case errors.Is(err, model.ErrInvalidQuoteListOptions):
 		writeError(c, http.StatusBadRequest, "INVALID_QUERY_PARAMS", "Invalid query parameters")
@@ -193,7 +196,7 @@ func (h *Handler) writeServiceError(c *gin.Context, err error) {
 	case errors.Is(err, model.ErrQuoteNotFound):
 		writeError(c, http.StatusNotFound, "QUOTE_NOT_FOUND", "Quote not found")
 	default:
-		writeError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Unexpected error")
+		writeError(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 	}
 }
 
