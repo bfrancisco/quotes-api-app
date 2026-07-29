@@ -16,7 +16,10 @@ docker version
 ## Build the REST API image
 
 ```bash
-docker build --no-cache -f build/Dockerfile.rest -t quotes-rest-api .
+docker build --no-cache -f build/Dockerfile.rest \
+  -t quotes-rest-api \
+  -t us-east4-docker.pkg.dev/ls-devx-int-np-e7d3/bryan-quotes-api/quotes-rest-api:latest \
+  .
 ```
 
 Run the REST API, mapping the container's port `8080` to the same local port:
@@ -36,7 +39,10 @@ Stop the foreground container with `Ctrl+C`. The `--rm` option removes the stopp
 ## Build the GraphQL API image
 
 ```bash
-docker build --no-cache -f build/Dockerfile.graphql -t quotes-graphql-api .
+docker build --no-cache -f build/Dockerfile.graphql \
+  -t quotes-graphql-api \
+  -t us-east4-docker.pkg.dev/ls-devx-int-np-e7d3/bryan-quotes-api/quotes-graphql-api:latest \
+  .
 ```
 
 Run the GraphQL API:
@@ -107,6 +113,11 @@ Remove the application images when they are no longer needed:
 
 ```bash
 docker image rm quotes-rest-api quotes-graphql-api
+```
+
+## Docker push to Artifact Registry repository
+```bash
+docker push <artifact_registry_address>/<image-tag>
 ```
 
 ## WSL Docker Desktop credential-helper workaround
