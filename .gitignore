@@ -1,3 +1,4 @@
 certs
 *.crt
 .env
+notes.md
