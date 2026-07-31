@@ -13,6 +13,7 @@ A Go learning project that compares REST and GraphQL implementations of the same
 - [x] Add a GraphQL API with gqlgen that calls `QuoteService`.
 - [x] Implement a Firestore repository adapter.
 - [x] Add Dockerfiles.
+- [x] Setup GCP products (Artifact Registry, Cloud Run, Firestore, Load Balancer)
 - [ ] Build a browser benchmark frontend for REST and GraphQL.
 - [ ] Deploy the APIs and connect GraphQL to Apollo GraphOS / Apollo Studio.
 
@@ -119,6 +120,17 @@ Alternatively, export values once for the current shell session:
 ```bash
 export SEED_QUOTES=true
 export STORAGE_MODE=memory
+go run ./cmd/rest-api
+```
+
+For a firestore-based store:
+
+```bash
+STORAGE_MODE=firestore \ 
+SEED_QUOTES=false \
+FIRESTORE_PROJECT_ID=<gcp-project-id> \
+FIRESTORE_DATABASE_ID=<firestore-db-id> \
+FIRESTORE_COLLECTION=<collection-name> \
 go run ./cmd/rest-api
 ```
 
