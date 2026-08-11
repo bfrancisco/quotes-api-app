@@ -112,12 +112,12 @@ export IMAGE_TAG="$(git rev-parse --short HEAD)"
 export IMAGE_BASE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}"
 
 docker build -f build/Dockerfile.rest \
-  -t "${IMAGE_BASE}/rest:${IMAGE_TAG}" .
+  -t "${IMAGE_BASE}/quotes-rest-api:${IMAGE_TAG}" .
 docker build -f build/Dockerfile.graphql \
-  -t "${IMAGE_BASE}/graphql:${IMAGE_TAG}" .
+  -t "${IMAGE_BASE}/quotes-graphql-api:${IMAGE_TAG}" .
 
-docker push "${IMAGE_BASE}/rest:${IMAGE_TAG}"
-docker push "${IMAGE_BASE}/graphql:${IMAGE_TAG}"
+docker push "${IMAGE_BASE}/quotes-rest-api:${IMAGE_TAG}"
+docker push "${IMAGE_BASE}/quotes-graphql-api:${IMAGE_TAG}"
 ```
 
 Confirm that both images exist:
@@ -132,11 +132,11 @@ Terraform should create the services and their configuration first. For an initi
 
 ```bash
 gcloud run services update "$REST_SERVICE" \
-  --image="${IMAGE_BASE}/rest:${IMAGE_TAG}" \
+  --image="${IMAGE_BASE}/quotes-rest-api:${IMAGE_TAG}" \
   --region="$REGION"
 
 gcloud run services update "$GRAPHQL_SERVICE" \
-  --image="${IMAGE_BASE}/graphql:${IMAGE_TAG}" \
+  --image="${IMAGE_BASE}/quotes-graphql-api:${IMAGE_TAG}" \
   --region="$REGION"
 ```
 
@@ -177,9 +177,9 @@ Verify with two accounts: an allowed account must reach the APIs after Google si
 Use two GitHub Actions workflows, aligned with the team's existing Terraform workflow:
 
 1. **Infrastructure repository:** pull requests run formatting, validation, and a Terraform plan; protected-main applies approved infrastructure.
-2. **Application repository:** pull requests run formatting, `go vet`, and `go test ./...`; protected-main builds both images, pushes SHA tags, and updates both Cloud Run services.
+2. **Application repository:** pull requests run formatting, `go vet`, Firestore-emulator-backed `go test ./...`, and non-pushing Docker builds. Protected `main` builds both images, pushes SHA and `latest` tags, then updates `bryan-quotes-rest-api` and `bryan-quotes-graphql-api` to the immutable SHA-tagged images.
 
-Configure GitHub Actions to use Workload Identity Federation. Do not save a downloaded Google service-account JSON key as a GitHub secret.
+Configure GitHub Actions to use Workload Identity Federation. The dedicated deployer needs repository-scoped Artifact Registry writer access, service-scoped Cloud Run developer access, and Service Account User only on the runtime service account. Do not save a downloaded Google service-account JSON key as a GitHub secret. Terraform remains responsible for every Cloud Run setting other than the image reference.
 
 ## 8. Verify and roll back
 

@@ -120,6 +120,17 @@ docker image rm quotes-rest-api quotes-graphql-api
 docker push <artifact_registry_address>/<image-tag>
 ```
 
+## GitHub Actions publishing and deployment
+
+The GitHub Actions workflow builds both images with BuildKit caching after validation succeeds on `main`. It publishes each image with the full Git commit SHA and the mutable `latest` tag, then updates the matching Cloud Run service with the SHA-tagged image.
+
+| Image | Cloud Run service |
+| --- | --- |
+| `quotes-rest-api` | `bryan-quotes-rest-api` |
+| `quotes-graphql-api` | `bryan-quotes-graphql-api` |
+
+`latest` is convenient for local testing, but deployments must use the immutable SHA tag (or a digest). The workflow updates images only; Terraform remains responsible for Cloud Run configuration and IAM.
+
 ## WSL Docker Desktop credential-helper workaround
 
 On WSL, Docker Desktop may fail before building with an error similar to:
