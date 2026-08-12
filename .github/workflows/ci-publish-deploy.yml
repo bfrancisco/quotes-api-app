@@ -1,0 +1,240 @@
+name: CI, publish, and deploy
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  go-checks:
+    name: Go format, vet, and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
+
+      - name: Start Firestore emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcloud components install beta cloud-firestore-emulator --quiet
+          gcloud beta emulators firestore start --host-port=127.0.0.1:8085 >"${RUNNER_TEMP}/firestore-emulator.log" 2>&1 &
+          echo "$!" > "${RUNNER_TEMP}/firestore-emulator.pid"
+
+          for attempt in {1..60}; do
+            if ! kill -0 "$(cat "${RUNNER_TEMP}/firestore-emulator.pid")" 2>/dev/null; then
+              cat "${RUNNER_TEMP}/firestore-emulator.log"
+              exit 1
+            fi
+            if nc -z 127.0.0.1 8085; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          cat "${RUNNER_TEMP}/firestore-emulator.log"
+          exit 1
+
+      - name: Check Go formatting
+        shell: bash
+        run: |
+          set -euo pipefail
+          unformatted="$(gofmt -l $(git ls-files '*.go'))"
+          if [[ -n "$unformatted" ]]; then
+            printf 'These Go files must be formatted:\n%s\n' "$unformatted"
+            exit 1
+          fi
+
+      - name: Vet Go code
+        run: go vet ./...
+
+      - name: Run Go tests
+        run: go test ./...
+        env:
+          FIRESTORE_EMULATOR_HOST: 127.0.0.1:8085
+          FIRESTORE_PROJECT_ID: quotes-api-emulator
+
+      - name: Stop Firestore emulator
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f "${RUNNER_TEMP}/firestore-emulator.pid" ]]; then
+            kill "$(cat "${RUNNER_TEMP}/firestore-emulator.pid")" 2>/dev/null || true
+          fi
+
+  docker-build:
+    name: Build ${{ matrix.name }} image
+    if: github.event_name == 'pull_request'
+    needs: go-checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: REST
+            dockerfile: build/Dockerfile.rest
+            cache_scope: quotes-rest-api
+          - name: GraphQL
+            dockerfile: build/Dockerfile.graphql
+            cache_scope: quotes-graphql-api
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Build ${{ matrix.name }} image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: false
+          cache-from: type=gha,scope=${{ matrix.cache_scope }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.cache_scope }}
+
+  publish-and-deploy:
+    name: Publish images and deploy Cloud Run
+    if: github.repository == 'bfrancisco/quotes-api-app' && github.ref == 'refs/heads/main'
+    needs: go-checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: quotes-api-deploy
+    permissions:
+      contents: read
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION }}
+      REPOSITORY: ${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}
+      REST_IMAGE_NAME: ${{ vars.REST_IMAGE_NAME }}
+      GRAPHQL_IMAGE_NAME: ${{ vars.GRAPHQL_IMAGE_NAME }}
+      REST_SERVICE: ${{ vars.REST_SERVICE }}
+      GRAPHQL_SERVICE: ${{ vars.GRAPHQL_SERVICE }}
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Validate deployment configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for variable in PROJECT_ID REGION REPOSITORY REST_IMAGE_NAME GRAPHQL_IMAGE_NAME REST_SERVICE GRAPHQL_SERVICE; do
+            if [[ -z "${!variable}" ]]; then
+              echo "GitHub Environment variable $variable is required."
+              exit 1
+            fi
+          done
+
+      - name: Authenticate to Google Cloud with service-account key
+        id: auth
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          token_format: access_token
+          access_token_lifetime: 600s
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Define image references
+        shell: bash
+        run: |
+          set -euo pipefail
+          registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}"
+          echo "REST_IMAGE=${registry}/${REST_IMAGE_NAME}" >> "$GITHUB_ENV"
+          echo "GRAPHQL_IMAGE=${registry}/${GRAPHQL_IMAGE_NAME}" >> "$GITHUB_ENV"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Build REST image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: build/Dockerfile.rest
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: |
+            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}/${{ vars.REST_IMAGE_NAME }}:${{ github.sha }}
+            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}/${{ vars.REST_IMAGE_NAME }}:latest
+          cache-from: type=gha,scope=quotes-rest-api
+          cache-to: type=gha,mode=max,scope=quotes-rest-api
+
+      - name: Build GraphQL image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: build/Dockerfile.graphql
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: |
+            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}/${{ vars.GRAPHQL_IMAGE_NAME }}:${{ github.sha }}
+            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}/${{ vars.GRAPHQL_IMAGE_NAME }}:latest
+          cache-from: type=gha,scope=quotes-graphql-api
+          cache-to: type=gha,mode=max,scope=quotes-graphql-api
+
+      - name: Push both images
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker push "${REST_IMAGE}:${IMAGE_TAG}"
+          docker push "${REST_IMAGE}:latest"
+          docker push "${GRAPHQL_IMAGE}:${IMAGE_TAG}"
+          docker push "${GRAPHQL_IMAGE}:latest"
+
+      - name: Deploy REST API
+        run: |
+          gcloud run services update "$REST_SERVICE" \
+            --image="${REST_IMAGE}:${IMAGE_TAG}" \
+            --region="$REGION" \
+            --project="$PROJECT_ID" \
+            --quiet
+
+      - name: Deploy GraphQL API
+        run: |
+          gcloud run services update "$GRAPHQL_SERVICE" \
+            --image="${GRAPHQL_IMAGE}:${IMAGE_TAG}" \
+            --region="$REGION" \
+            --project="$PROJECT_ID" \
+            --quiet
+
+      - name: Write deployment summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Container publication and Cloud Run deployment"
+            echo
+            echo "| API | Immutable image | Cloud Run service |"
+            echo "| --- | --- | --- |"
+            echo "| REST | \`${REST_IMAGE:-unavailable}:${IMAGE_TAG}\` | \`${REST_SERVICE}\` |"
+            echo "| GraphQL | \`${GRAPHQL_IMAGE:-unavailable}:${IMAGE_TAG}\` | \`${GRAPHQL_SERVICE}\` |"
+            echo
+            echo "The deployment commands wait for each Cloud Run revision to become ready and route traffic to the latest revision."
+          } >> "$GITHUB_STEP_SUMMARY"
