@@ -214,23 +214,24 @@ jobs:
           docker push "${GRAPHQL_IMAGE}:${IMAGE_TAG}"
           docker push "${GRAPHQL_IMAGE}:latest"
 
-      - name: Deploy REST API
-        id: deploy-rest
-        uses: google-github-actions/deploy-cloudrun@251330ba9a8a34bfbc1622895f42e1d53fd14522 # v2.7.6
-        with:
-          service: ${{ env.REST_SERVICE }}
-          image: ${{ env.REST_IMAGE }}:${{ env.IMAGE_TAG }}
-          region: ${{ env.REGION }}
-          project_id: ${{ env.PROJECT_ID }}
+      #  Commented out for now; can't deploy Cloud Run due to company policy restrictions on the GCP project.
+      # - name: Deploy REST API
+      #   id: deploy-rest
+      #   uses: google-github-actions/deploy-cloudrun@251330ba9a8a34bfbc1622895f42e1d53fd14522 # v2.7.6
+      #   with:
+      #     service: ${{ env.REST_SERVICE }}
+      #     image: ${{ env.REST_IMAGE }}:${{ env.IMAGE_TAG }}
+      #     region: ${{ env.REGION }}
+      #     project_id: ${{ env.PROJECT_ID }}
 
-      - name: Deploy GraphQL API
-        id: deploy-graphql
-        uses: google-github-actions/deploy-cloudrun@251330ba9a8a34bfbc1622895f42e1d53fd14522 # v2.7.6
-        with:
-          service: ${{ env.GRAPHQL_SERVICE }}
-          image: ${{ env.GRAPHQL_IMAGE }}:${{ env.IMAGE_TAG }}
-          region: ${{ env.REGION }}
-          project_id: ${{ env.PROJECT_ID }}
+      # - name: Deploy GraphQL API
+      #   id: deploy-graphql
+      #   uses: google-github-actions/deploy-cloudrun@251330ba9a8a34bfbc1622895f42e1d53fd14522 # v2.7.6
+      #   with:
+      #     service: ${{ env.GRAPHQL_SERVICE }}
+      #     image: ${{ env.GRAPHQL_IMAGE }}:${{ env.IMAGE_TAG }}
+      #     region: ${{ env.REGION }}
+      #     project_id: ${{ env.PROJECT_ID }}
 
       - name: Write deployment summary
         if: always()
