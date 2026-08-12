@@ -220,6 +220,7 @@ jobs:
             --image="${REST_IMAGE}:${IMAGE_TAG}" \
             --region="$REGION" \
             --project="$PROJECT_ID" \
+            --bypass-vpc-sc \
             --quiet
 
       - name: Deploy GraphQL API
@@ -228,6 +229,7 @@ jobs:
             --image="${GRAPHQL_IMAGE}:${IMAGE_TAG}" \
             --region="$REGION" \
             --project="$PROJECT_ID" \
+            --bypass-vpc-sc \
             --quiet
 
       - name: Write deployment summary
