@@ -65,9 +65,52 @@
 | Malformed request body => INVALID_REQUEST_BODY | Transport-specific | Yes | N/A |
 | createdAt serialization (RFC3339Nano) | Transport-specific | N/A | Yes |
 
+## Running Firestore Emulator Tests Locally
+
+The default `go test ./...` command skips Firestore integration tests unless `FIRESTORE_EMULATOR_HOST` is set.
+
+Start the emulator using one of these approaches.
+
+### Option A: Docker
+
+With a running Docker daemon, start the emulator in one terminal and leave it running:
+
+```bash
+docker run --rm --name quotes-firestore-emulator \
+  -p 127.0.0.1:8085:8085 \
+  gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators \
+  gcloud beta emulators firestore start --host-port=0.0.0.0:8085
+```
+
+### Option B: Standalone Google Cloud CLI
+
+Use an installation created by the [official Google Cloud CLI installer](https://cloud.google.com/sdk/docs/install), then install the emulator component once and start it:
+
+```bash
+gcloud components install beta cloud-firestore-emulator
+gcloud beta emulators firestore start --host-port=127.0.0.1:8085
+```
+
+Package-manager-managed installations of `gcloud` (including Snap installations) cannot install components with `gcloud components install`; use Docker or a standalone CLI installation instead.
+
+After the emulator is running, configure the test process in another terminal and run all tests:
+
+```bash
+export FIRESTORE_EMULATOR_HOST=127.0.0.1:8085
+export FIRESTORE_PROJECT_ID=quotes-api-emulator
+go test ./...
+```
+
+Stop the emulator with `Ctrl+C` when testing is complete.
+
 ## Planned and Follow-up Roadmap
 
 - Keep contract tests as the default parity gate for transport behavior changes.
+- Maintain Firestore repository coverage as an emulator-backed integration test:
+  - Keep `go test ./...` usable without local Google Cloud tooling by skipping this test when `FIRESTORE_EMULATOR_HOST` is unset.
+  - In CI, start a Firestore emulator and set `FIRESTORE_EMULATOR_HOST=127.0.0.1:8085` so every change runs the Firestore storage contract suite.
+  - For local verification of Firestore changes, start the emulator, set `FIRESTORE_EMULATOR_HOST` (and a test `FIRESTORE_PROJECT_ID`), then run `go test ./...`.
+  - Keep emulator tests isolated with a unique collection per test and cleanup after each test run.
 - Add edge-case parity scenarios to shared suite when requirements expand (for example invalid author or duplicate quote policy), only if behavior should match across transports.
 - Keep protocol-specific behavior in local files:
   - REST: HTTP parsing/envelope/status details.

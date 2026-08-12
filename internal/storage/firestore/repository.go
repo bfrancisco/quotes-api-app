@@ -50,7 +50,9 @@ func (r *Repository) CreateQuote(ctx context.Context, input model.QuoteCreateInp
 		ID:        r.newID(),
 		Text:      input.Text,
 		Author:    input.Author,
-		CreatedAt: r.now().UTC(),
+		// Firestore stores timestamps with microsecond precision. Normalize before
+		// persisting so the quote returned from CreateQuote matches later reads.
+		CreatedAt: r.now().UTC().Truncate(time.Microsecond),
 	}
 	_, err := r.collection.Doc(quote.ID).Create(ctx, quoteDocument{Text: quote.Text, Author: quote.Author, CreatedAt: quote.CreatedAt})
 	if err != nil {
