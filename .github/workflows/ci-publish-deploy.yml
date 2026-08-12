@@ -215,22 +215,22 @@ jobs:
           docker push "${GRAPHQL_IMAGE}:latest"
 
       - name: Deploy REST API
-        run: |
-          gcloud run services update "$REST_SERVICE" \
-            --image="${REST_IMAGE}:${IMAGE_TAG}" \
-            --region="$REGION" \
-            --project="$PROJECT_ID" \
-            --vpc-connector=vpc-np \
-            --quiet
+        id: deploy-rest
+        uses: google-github-actions/deploy-cloudrun@251330ba9a8a34bfbc1622895f42e1d53fd14522 # v2.7.6
+        with:
+          service: ${{ env.REST_SERVICE }}
+          image: ${{ env.REST_IMAGE }}:${{ env.IMAGE_TAG }}
+          region: ${{ env.REGION }}
+          project_id: ${{ env.PROJECT_ID }}
 
       - name: Deploy GraphQL API
-        run: |
-          gcloud run services update "$GRAPHQL_SERVICE" \
-            --image="${GRAPHQL_IMAGE}:${IMAGE_TAG}" \
-            --region="$REGION" \
-            --project="$PROJECT_ID" \
-            --vpc-connector=vpc-np \
-            --quiet
+        id: deploy-graphql
+        uses: google-github-actions/deploy-cloudrun@251330ba9a8a34bfbc1622895f42e1d53fd14522 # v2.7.6
+        with:
+          service: ${{ env.GRAPHQL_SERVICE }}
+          image: ${{ env.GRAPHQL_IMAGE }}:${{ env.IMAGE_TAG }}
+          region: ${{ env.REGION }}
+          project_id: ${{ env.PROJECT_ID }}
 
       - name: Write deployment summary
         if: always()
