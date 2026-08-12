@@ -28,6 +28,8 @@ Create the `quotes-api-deploy` environment, restrict it to `main`, and add these
 - `ARTIFACT_REGISTRY_REPOSITORY=bryan-quotes-api`
 - `REST_IMAGE_NAME=quotes-rest-api`
 - `GRAPHQL_IMAGE_NAME=quotes-graphql-api`
+- `REST_IMAGE_NAME=quotes-rest-api`
+- `GRAPHQL_IMAGE_NAME=quotes-graphql-api`
 - Secret: `GCP_SERVICE_ACCOUNT_KEY=<entire JSON content of the key for bryan-github-actions@ls-devx-int-np-e7d3.iam.gserviceaccount.com>`
 
 The first five entries are GitHub Environment variables; `GCP_SERVICE_ACCOUNT_KEY` is a GitHub Environment secret. Restrict the `quotes-api-deploy` environment to `main`. Keep the default workflow token read-only; OIDC `id-token: write` is not required.
