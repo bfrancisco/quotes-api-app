@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
-	"fmt"
 
 	firestoreclient "cloud.google.com/go/firestore"
 	"github.com/bfrancisco/quotes-api-app/internal/repository"

@@ -3,9 +3,9 @@ package runtime
 import (
 	"fmt"
 	"os"
-	"strings"
 	"strconv"
-) 
+	"strings"
+)
 
 const (
 	StorageModeMemory    = "memory"
@@ -32,7 +32,6 @@ func LoadConfig(defaultPort string) (Config, error) {
 		FirestoreDatabaseID: strings.TrimSpace(os.Getenv("FIRESTORE_DATABASE_ID")),
 		FirestoreCollection: valueOrDefault("FIRESTORE_COLLECTION", "quotes"),
 		SeedQuotes:          parseBoolOrDefault("SEED_QUOTES", false),
-		
 	}
 
 	if config.Port == "" {
