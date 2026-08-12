@@ -131,6 +131,8 @@ The GitHub Actions workflow builds both images with BuildKit caching after valid
 
 `latest` is convenient for local testing, but deployments must use the immutable SHA tag (or a digest). The workflow updates images only; Terraform remains responsible for Cloud Run configuration and IAM.
 
+The deployment workflow authenticates with the `GCP_SERVICE_ACCOUNT_KEY` GitHub Environment secret in `quotes-api-deploy`. Keep the key JSON out of the repository, logs, and local configuration files; rotate the dedicated key according to company policy.
+
 ## WSL Docker Desktop credential-helper workaround
 
 On WSL, Docker Desktop may fail before building with an error similar to:

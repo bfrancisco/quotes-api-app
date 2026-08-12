@@ -16,12 +16,8 @@ Automate validation, container publishing, and Cloud Run redeployment for both A
 - Grant it `roles/artifactregistry.writer` on that repository only.
 - Grant `roles/run.developer` only on `bryan-quotes-rest-api` and `bryan-quotes-graphql-api` in `us-east4`.
 - Grant `roles/iam.serviceAccountUser` only on the shared Cloud Run runtime identity `sa-bryan-quotes-api@ls-devx-int-np-e7d3.iam.gserviceaccount.com`.
-- Configure Workload Identity Federation for:
-  - Repository: `bfrancisco/quotes-api-app`
-  - Branch: `main`
-  - GitHub environment: `quotes-api-deploy`
-- Export the WIF provider resource name and service-account email.
-- Do not create a service-account JSON key or grant project-wide Cloud Run or Artifact Registry permissions.
+- Generate one user-managed key for this service account and store its JSON only as a GitHub Environment secret.
+- Do not grant project-wide Cloud Run or Artifact Registry permissions.
 
 ## 2. Configure GitHub
 
@@ -32,10 +28,9 @@ Create the `quotes-api-deploy` environment, restrict it to `main`, and add these
 - `ARTIFACT_REGISTRY_REPOSITORY=bryan-quotes-api`
 - `REST_IMAGE_NAME=quotes-rest-api`
 - `GRAPHQL_IMAGE_NAME=quotes-graphql-api`
-- `GCP_WORKLOAD_IDENTITY_PROVIDER=projects/408378328351/locations/global/workloadIdentityPools/github/providers/bryan-quotes-api-provider`
-- `GCP_SERVICE_ACCOUNT=bryan-github-actions@ls-devx-int-np-e7d3.iam.gserviceaccount.com`
+- Secret: `GCP_SERVICE_ACCOUNT_KEY=<entire JSON content of the key for bryan-github-actions@ls-devx-int-np-e7d3.iam.gserviceaccount.com>`
 
-These are resource identifiers, not credentials. Keep the default workflow token read-only and grant `id-token: write` only to the publishing/deployment job.
+The first five entries are GitHub Environment variables; `GCP_SERVICE_ACCOUNT_KEY` is a GitHub Environment secret. Restrict the `quotes-api-deploy` environment to `main`. Keep the default workflow token read-only; OIDC `id-token: write` is not required.
 
 ## 3. Add the workflow
 
@@ -59,7 +54,7 @@ Pull-request jobs must not receive GCP credentials or access the publishing envi
 ### Pushes to `main`
 
 1. Require the Go checks to pass.
-2. Authenticate to GCP through WIF using a short-lived OIDC token.
+2. Authenticate to GCP with the `GCP_SERVICE_ACCOUNT_KEY` Environment secret.
 3. Build both images successfully before pushing.
 4. Push each image with the full commit SHA and `latest` tags:
    - `us-east4-docker.pkg.dev/ls-devx-int-np-e7d3/bryan-quotes-api/quotes-rest-api`
@@ -92,11 +87,12 @@ Prevent merges that bypass required checks.
 - Test controlled formatting, test, and Docker build failures.
 - Merge to `main` and verify both SHA and `latest` tags in Artifact Registry.
 - Verify both Cloud Run services use the intended SHA-tagged images and their latest revisions are ready with 100% traffic.
-- Verify IAM is repository/service-scoped and no JSON key exists.
+- Verify IAM is repository/service-scoped, the key is available only through the `quotes-api-deploy` Environment, and no key contents appear in logs.
 
 ## Important constraints
 
-- WIF and IAM must exist before image publishing or deployment can succeed.
+- The service account, its least-privilege IAM bindings, and its GitHub Environment key secret must exist before image publishing or deployment can succeed.
+- A service-account key is a long-lived credential: create only one dedicated key, restrict the GitHub Environment to `main`, rotate it on a defined schedule and immediately after suspected exposure, then disable and delete the replaced key.
 - `latest` is mutable; deployments should use the SHA tag or image digest.
 - Two image pushes are not atomic, although building both first reduces partial publication risk.
 - Cloud Run updates are image-only. The workflow does not change runtime configuration or roll back partial deployments automatically.

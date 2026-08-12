@@ -53,7 +53,7 @@ Create a Terraform pull request that follows those conventions. It should provis
 | Firestore database and indexes | Stores quotes durably for both APIs. |
 | Cloud Run runtime service account | Lets the APIs access Firestore without key files. |
 | Two Cloud Run services | Runs REST and GraphQL independently. |
-| Workload Identity Federation | Lets GitHub Actions authenticate without a service-account key. |
+| GitHub Actions deployer service account | Lets GitHub Actions publish images and update the two Cloud Run services using an Environment-scoped key secret. |
 | Serverless NEGs, routes, and IAP | Routes browser traffic and protects it with Google sign-in. |
 
 ### Terraform ownership boundary
@@ -179,7 +179,7 @@ Use two GitHub Actions workflows, aligned with the team's existing Terraform wor
 1. **Infrastructure repository:** pull requests run formatting, validation, and a Terraform plan; protected-main applies approved infrastructure.
 2. **Application repository:** pull requests run formatting, `go vet`, Firestore-emulator-backed `go test ./...`, and non-pushing Docker builds. Protected `main` builds both images, pushes SHA and `latest` tags, then updates `bryan-quotes-rest-api` and `bryan-quotes-graphql-api` to the immutable SHA-tagged images.
 
-Configure GitHub Actions to use Workload Identity Federation. The dedicated deployer needs repository-scoped Artifact Registry writer access, service-scoped Cloud Run developer access, and Service Account User only on the runtime service account. Do not save a downloaded Google service-account JSON key as a GitHub secret. Terraform remains responsible for every Cloud Run setting other than the image reference.
+Configure GitHub Actions to authenticate with the dedicated deployer's user-managed key, stored as the `GCP_SERVICE_ACCOUNT_KEY` secret in the `quotes-api-deploy` GitHub Environment. Restrict that Environment to `main`. The deployer needs repository-scoped Artifact Registry writer access, service-scoped Cloud Run developer access, and Service Account User only on the runtime service account. Create a dedicated key, rotate it regularly and immediately on suspected exposure, and delete the previous key after a successful rotation. Terraform remains responsible for every Cloud Run setting other than the image reference.
 
 ## 8. Verify and roll back
 
