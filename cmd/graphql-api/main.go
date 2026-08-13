@@ -42,8 +42,8 @@ func main() {
 	server.SetErrorPresenter(graphqltransport.ErrorPresenter)
 
 	mux := http.NewServeMux()
-	mux.Handle("/", playground.Handler("Quotes GraphQL Playground", "/query"))
-	mux.Handle("/query", server)
+	mux.Handle("/", playground.Handler("Quotes GraphQL Playground", "/graphql/query"))
+	mux.Handle("/graphql/query", server)
 
 	log.Printf("GraphQL playground available at http://localhost:%s/", config.Port)
 	if err := runtime.Serve(&http.Server{Addr: ":" + config.Port, Handler: mux}); err != nil {
