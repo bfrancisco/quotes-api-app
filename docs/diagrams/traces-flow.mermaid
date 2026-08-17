@@ -1,10 +1,17 @@
 sequenceDiagram
-    participant App as API process
-    participant SDK as OTel SDK
+    participant Client
+    participant HTTP as REST / GraphQL middleware
+    participant Handler as Handler or gqlgen server
+    participant OTel as Tracer provider
     participant Collector
     participant Jaeger
 
-    App->>SDK: End span
-    SDK->>SDK: Batch spans
-    SDK->>Collector: OTLP/HTTP export
-    Collector->>Jaeger: Export transformed traces
+    Client->>HTTP: Request with optional traceparent
+    HTTP->>OTel: Extract context and start server span
+    HTTP->>Handler: Request context containing span
+    Handler-->>HTTP: Existing response
+    HTTP->>HTTP: Set X-Trace-ID
+    HTTP->>OTel: End server span
+    OTel->>Collector: OTLP/HTTP batch
+    Collector->>Jaeger: Export trace
+    HTTP-->>Client: Existing response + X-Trace-ID
