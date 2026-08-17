@@ -18,6 +18,7 @@ import (
 	"github.com/bfrancisco/quotes-api-app/internal/telemetry"
 	graphqltransport "github.com/bfrancisco/quotes-api-app/internal/transport/graphql"
 	"github.com/bfrancisco/quotes-api-app/internal/transport/graphql/generated"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func main() {
@@ -55,7 +56,10 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/", playground.Handler("Quotes GraphQL Playground", "/graphql/query"))
-	mux.Handle("/graphql/query", server)
+	mux.Handle("/graphql/query", otelhttp.NewHandler(
+		telemetry.TraceIDHandler(server),
+		"POST /graphql/query",
+	))
 
 	log.Printf("GraphQL playground available at http://localhost:%s/", config.Port)
 	if err := runtime.Serve(&http.Server{Addr: ":" + config.Port, Handler: mux}); err != nil {

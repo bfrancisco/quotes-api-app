@@ -17,6 +17,7 @@ import (
 	"github.com/bfrancisco/quotes-api-app/internal/telemetry"
 	resttransport "github.com/bfrancisco/quotes-api-app/internal/transport/rest"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 func main() {
@@ -49,6 +50,12 @@ func main() {
 	}
 
 	router := gin.Default()
+	router.Use(
+		otelgin.Middleware(config.TelemetryServiceName, otelgin.WithFilter(func(request *http.Request) bool {
+			return request.URL.Path != "/v1/health"
+		})),
+		telemetry.GinTraceIDMiddleware(),
+	)
 	resttransport.NewHandler(quoteService).RegisterRoutes(router.Group("/v1"))
 	server := &http.Server{Addr: ":" + config.Port, Handler: router}
 	if err := runtime.Serve(server); err != nil {
