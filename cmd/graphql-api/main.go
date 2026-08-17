@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"time"
 
 	firestoreclient "cloud.google.com/go/firestore"
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -14,15 +15,26 @@ import (
 	"github.com/bfrancisco/quotes-api-app/internal/service"
 	firestorestorage "github.com/bfrancisco/quotes-api-app/internal/storage/firestore"
 	"github.com/bfrancisco/quotes-api-app/internal/storage/memory"
+	"github.com/bfrancisco/quotes-api-app/internal/telemetry"
 	graphqltransport "github.com/bfrancisco/quotes-api-app/internal/transport/graphql"
 	"github.com/bfrancisco/quotes-api-app/internal/transport/graphql/generated"
 )
 
 func main() {
-	config, err := runtime.LoadConfig("8081")
+	config, err := runtime.LoadConfig("8081", "quotes-graphql-api")
 	if err != nil {
 		log.Fatalf("invalid runtime configuration: %v", err)
 	}
+	shutdownTelemetry, err := telemetry.Setup(context.Background(), telemetry.Config{
+		ServiceName:           config.TelemetryServiceName,
+		ServiceVersion:        config.TelemetryServiceVer,
+		DeploymentEnvironment: config.DeploymentEnvironment,
+	})
+	if err != nil {
+		log.Fatalf("initialize telemetry: %v", err)
+	}
+	defer shutdownTelemetryWithTimeout(shutdownTelemetry)
+
 	repository, closeRepository, err := newRepository(context.Background(), config)
 	if err != nil {
 		log.Fatalf("create quote repository: %v", err)
@@ -48,6 +60,14 @@ func main() {
 	log.Printf("GraphQL playground available at http://localhost:%s/", config.Port)
 	if err := runtime.Serve(&http.Server{Addr: ":" + config.Port, Handler: mux}); err != nil {
 		log.Fatalf("failed to start GraphQL API server: %v", err)
+	}
+}
+
+func shutdownTelemetryWithTimeout(shutdown telemetry.ShutdownFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := shutdown(ctx); err != nil {
+		log.Printf("shutdown telemetry: %v", err)
 	}
 }
 

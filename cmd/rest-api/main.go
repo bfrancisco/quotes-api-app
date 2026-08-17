@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	firestoreclient "cloud.google.com/go/firestore"
 	"github.com/bfrancisco/quotes-api-app/internal/repository"
@@ -13,15 +14,26 @@ import (
 	"github.com/bfrancisco/quotes-api-app/internal/service"
 	firestorestorage "github.com/bfrancisco/quotes-api-app/internal/storage/firestore"
 	"github.com/bfrancisco/quotes-api-app/internal/storage/memory"
+	"github.com/bfrancisco/quotes-api-app/internal/telemetry"
 	resttransport "github.com/bfrancisco/quotes-api-app/internal/transport/rest"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	config, err := runtime.LoadConfig("8080")
+	config, err := runtime.LoadConfig("8080", "quotes-rest-api")
 	if err != nil {
 		log.Fatalf("invalid runtime configuration: %v", err)
 	}
+	shutdownTelemetry, err := telemetry.Setup(context.Background(), telemetry.Config{
+		ServiceName:           config.TelemetryServiceName,
+		ServiceVersion:        config.TelemetryServiceVer,
+		DeploymentEnvironment: config.DeploymentEnvironment,
+	})
+	if err != nil {
+		log.Fatalf("initialize telemetry: %v", err)
+	}
+	defer shutdownTelemetryWithTimeout(shutdownTelemetry)
+
 	repository, closeRepository, err := newRepository(context.Background(), config)
 	if err != nil {
 		log.Fatalf("create quote repository: %v", err)
@@ -41,6 +53,14 @@ func main() {
 	server := &http.Server{Addr: ":" + config.Port, Handler: router}
 	if err := runtime.Serve(server); err != nil {
 		log.Fatalf("failed to start REST API server: %v", err)
+	}
+}
+
+func shutdownTelemetryWithTimeout(shutdown telemetry.ShutdownFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := shutdown(ctx); err != nil {
+		log.Printf("shutdown telemetry: %v", err)
 	}
 }
 
