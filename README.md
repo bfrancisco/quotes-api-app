@@ -1,6 +1,13 @@
-# Quotes API Benchmark
+# Quotes API
 
-A Go learning project that compares REST and GraphQL implementations of the same Quotes API. It provides layered REST and gqlgen GraphQL APIs backed by independent in-memory stores. Persistent storage, containers, and benchmarking are future milestones.
+A Go learning project that:
+
+- Implements **REST** and **GraphQL** services for the same Quotes API.
+- Shares a layered application core across both transports, keeping business rules independent of transport and storage technologies.
+- Supports **in-memory** and **Firestore** data-storage implementations.
+- Uses Docker to package the services and Artifact Registry to store container images.
+- Uses Cloud Run to run the services in the cloud.
+- Uses a GCP Load Balancer to expose a public endpoint.
 
 ## To-do
 
@@ -14,8 +21,9 @@ A Go learning project that compares REST and GraphQL implementations of the same
 - [x] Implement a Firestore repository adapter.
 - [x] Add Dockerfiles.
 - [x] Setup GCP products (Artifact Registry, Cloud Run, Firestore, Load Balancer)
-- [ ] Build a browser benchmark frontend for REST and GraphQL.
-- [ ] Deploy the APIs and connect GraphQL to Apollo GraphOS / Apollo Studio.
+- [x] Deploy the APIs to GCP and test E2E flow.
+- [ ] Add OpenTelemetry instrumentation and Jaeger tracing for both API services.
+- [ ] Connect GraphQL to Apollo GraphOS / Apollo Studio.
 
 ## Project Goals
 
@@ -23,7 +31,6 @@ A Go learning project that compares REST and GraphQL implementations of the same
 - Learn application layering and request flow.
 - Keep business rules independent from REST, GraphQL, and storage technologies.
 - Implement equivalent REST and GraphQL capabilities after the shared application core is stable.
-- Compare both API styles with measurable browser-side benchmarks.
 - Add persistent storage, containerization, deployment, and GraphQL tooling incrementally.
 
 ## Architecture Direction
@@ -247,6 +254,5 @@ See [rest-api-curls.md](rest-api-curls.md) for more request examples and [openap
 - Implementing CRUD use cases with validation and error handling.
 - Sharing business logic between REST and GraphQL transports.
 - Replacing in-memory storage with a NoSQL adapter.
-- Measuring API behavior from a browser client.
 - Packaging and deploying independently runnable API services.
 
