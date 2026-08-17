@@ -1,0 +1,7 @@
+flowchart LR
+    Client -->|HTTP + optional traceparent| Server[HTTP server span]
+    Server --> Domain[QuoteService span]
+    Domain --> Storage[Firestore client span]
+    Storage --> Exporter[OTLP/HTTP exporter]
+    Exporter --> Collector[OpenTelemetry Collector]
+    Collector --> Jaeger[Jaeger]

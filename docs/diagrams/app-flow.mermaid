@@ -1,0 +1,8 @@
+flowchart TD
+    Client --> REST[REST Handler]
+    Client --> GQL[GraphQL Resolver]
+    REST --> Service[QuoteService]
+    GQL --> Service
+    Service --> Port[QuoteRepository interface]
+    Port --> Memory[Memory repository]
+    Port --> Firestore[Firestore repository]

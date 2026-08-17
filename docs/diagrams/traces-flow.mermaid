@@ -1,0 +1,10 @@
+sequenceDiagram
+    participant App as API process
+    participant SDK as OTel SDK
+    participant Collector
+    participant Jaeger
+
+    App->>SDK: End span
+    SDK->>SDK: Batch spans
+    SDK->>Collector: OTLP/HTTP export
+    Collector->>Jaeger: Export transformed traces
