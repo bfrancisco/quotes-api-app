@@ -1,0 +1,8 @@
+flowchart TD
+    HTTP[HTTP server span]
+    HTTP --> REST[REST handler]
+    HTTP --> GQL[GraphQL handler]
+    GQL --> Operation[OperationTracing span: graphql.query or graphql.mutation]
+    REST --> Service[QuoteService span: quote operation]
+    Operation --> Service
+    Service --> Repository[Repository call with service span context]

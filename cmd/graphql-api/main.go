@@ -52,6 +52,7 @@ func main() {
 	server := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
 		Resolvers: graphqltransport.NewResolver(quoteService),
 	}))
+	server.Use(graphqltransport.OperationTracing{})
 	server.SetErrorPresenter(graphqltransport.ErrorPresenter)
 
 	mux := http.NewServeMux()

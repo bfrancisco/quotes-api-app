@@ -1,12 +1,12 @@
 package rest
 
 import (
-	"errors"
 	"net/http"
 	"time"
 
 	"github.com/bfrancisco/quotes-api-app/internal/model"
 	"github.com/bfrancisco/quotes-api-app/internal/service"
+	"github.com/bfrancisco/quotes-api-app/internal/telemetry"
 	"github.com/gin-gonic/gin"
 )
 
@@ -180,23 +180,16 @@ func (h *Handler) writeServiceError(c *gin.Context, err error) {
 	if err == nil {
 		return
 	}
-	switch {
-	case errors.Is(err, model.ErrInvalidQuoteListOptions):
-		writeError(c, http.StatusBadRequest, "INVALID_QUERY_PARAMS", "Invalid query parameters")
-	case errors.Is(err, model.ErrInvalidQuoteID):
-		writeError(c, http.StatusBadRequest, "INVALID_QUOTE_ID", "Invalid quote ID")
-	case errors.Is(err, model.ErrInvalidQuoteText):
-		writeError(c, http.StatusBadRequest, "INVALID_QUOTE_TEXT", "Invalid quote text")
-	case errors.Is(err, model.ErrInvalidQuoteAuthor):
-		writeError(c, http.StatusBadRequest, "INVALID_QUOTE_AUTHOR", "Invalid quote author")
-	case errors.Is(err, model.ErrNoFieldsToUpdate):
-		writeError(c, http.StatusBadRequest, "NO_FIELDS_TO_UPDATE", "No fields to update")
-	case errors.Is(err, model.ErrQuoteAlreadyExists):
-		writeError(c, http.StatusConflict, "QUOTE_ALREADY_EXISTS", "Quote already exists")
-	case errors.Is(err, model.ErrQuoteNotFound):
-		writeError(c, http.StatusNotFound, "QUOTE_NOT_FOUND", "Quote not found")
+	details := telemetry.ClassifyError(err)
+	switch details.Code {
+	case "INVALID_QUERY_PARAMS", "INVALID_QUOTE_ID", "INVALID_QUOTE_TEXT", "INVALID_QUOTE_AUTHOR", "NO_FIELDS_TO_UPDATE":
+		writeError(c, http.StatusBadRequest, details.Code, details.Message)
+	case "QUOTE_ALREADY_EXISTS":
+		writeError(c, http.StatusConflict, details.Code, details.Message)
+	case "QUOTE_NOT_FOUND":
+		writeError(c, http.StatusNotFound, details.Code, details.Message)
 	default:
-		writeError(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		writeError(c, http.StatusInternalServerError, details.Code, details.Message)
 	}
 }
 

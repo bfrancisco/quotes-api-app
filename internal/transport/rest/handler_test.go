@@ -108,10 +108,10 @@ func TestRESTRequestContinuesTraceAndReturnsTraceID(t *testing.T) {
 	}
 
 	spans := exporter.GetSpans()
-	if len(spans) != 1 {
-		t.Fatalf("exported span count = %d, want 1", len(spans))
+	if len(spans) != 2 {
+		t.Fatalf("exported span count = %d, want HTTP and service spans", len(spans))
 	}
-	span := spans[0]
+	span := findRESTSpan(t, spans, "POST /v1/quotes")
 	if span.Name != "POST /v1/quotes" {
 		t.Fatalf("span name = %q, want route-oriented name", span.Name)
 	}
@@ -149,14 +149,15 @@ func TestRESTResponseIncludesTraceIDWithoutRequestBodyAttributes(t *testing.T) {
 	}
 
 	spans := exporter.GetSpans()
-	if len(spans) != 1 {
-		t.Fatalf("exported span count = %d, want 1", len(spans))
+	if len(spans) != 2 {
+		t.Fatalf("exported span count = %d, want HTTP and service spans", len(spans))
 	}
+	span := findRESTSpan(t, spans, "POST /v1/quotes")
 	if got := response.Header().Get(telemetry.TraceIDHeader); got == "" {
 		t.Fatalf("%s is empty, want active trace ID", telemetry.TraceIDHeader)
 	}
-	if spanHasAttributeValue(spans[0].Attributes, "private quote text") || spanHasAttributeValue(spans[0].Attributes, "private author") {
-		t.Fatalf("span attributes = %v, must not include request body values", spans[0].Attributes)
+	if spanHasAttributeValue(span.Attributes, "private quote text") || spanHasAttributeValue(span.Attributes, "private author") {
+		t.Fatalf("span attributes = %v, must not include request body values", span.Attributes)
 	}
 }
 
@@ -183,4 +184,15 @@ func spanHasAttributeValue(attributes []attribute.KeyValue, value string) bool {
 		}
 	}
 	return false
+}
+
+func findRESTSpan(t *testing.T, spans tracetest.SpanStubs, name string) tracetest.SpanStub {
+	t.Helper()
+	for _, span := range spans {
+		if span.Name == name {
+			return span
+		}
+	}
+	t.Fatalf("span %q not found in %v", name, spans)
+	return tracetest.SpanStub{}
 }

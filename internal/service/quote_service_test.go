@@ -8,6 +8,11 @@ import (
 
 	"github.com/bfrancisco/quotes-api-app/internal/model"
 	"github.com/bfrancisco/quotes-api-app/internal/service"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const validQuoteID = "550e8400-e29b-41d4-a716-446655440000"
@@ -145,4 +150,65 @@ func TestGetAndDeleteQuoteValidateIDBeforeCallingRepository(t *testing.T) {
 	if getCalled || deleteCalled {
 		t.Fatal("service called repository for an invalid ID")
 	}
+}
+
+func TestCreateQuoteCreatesChildSpanAndPropagatesItsContext(t *testing.T) {
+	exporter := tracetest.NewInMemoryExporter()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+	otel.SetTracerProvider(provider)
+	defer provider.Shutdown(context.Background())
+
+	repository := newFakeRepository()
+	var repositorySpan trace.SpanContext
+	repository.createQuote = func(ctx context.Context, _ model.QuoteCreateInput) (model.Quote, error) {
+		repositorySpan = trace.SpanContextFromContext(ctx)
+		return testQuote(validQuoteID), nil
+	}
+
+	parentContext, parentSpan := provider.Tracer("test").Start(context.Background(), "parent")
+	_, err := service.NewQuoteService(repository).CreateQuote(parentContext, model.QuoteCreateInput{Text: "Trace me", Author: "Author"})
+	parentSpan.End()
+	if err != nil {
+		t.Fatalf("CreateQuote() error = %v, want nil", err)
+	}
+
+	spans := exporter.GetSpans()
+	if len(spans) != 2 {
+		t.Fatalf("exported span count = %d, want parent and service spans", len(spans))
+	}
+	serviceSpan := spans[0]
+	if serviceSpan.Name != "quote.create" || serviceSpan.Parent.SpanID() != parentSpan.SpanContext().SpanID() {
+		t.Fatalf("service span = %#v, want quote.create child of parent", serviceSpan)
+	}
+	if repositorySpan.SpanID() != serviceSpan.SpanContext.SpanID() {
+		t.Fatalf("repository context span = %s, want service span %s", repositorySpan.SpanID(), serviceSpan.SpanContext.SpanID())
+	}
+	if serviceSpanHasAttribute(serviceSpan.Attributes, "quote text", "Trace me") || serviceSpanHasAttribute(serviceSpan.Attributes, "quote author", "Author") {
+		t.Fatalf("service span attributes = %v, must not include quote content", serviceSpan.Attributes)
+	}
+}
+
+func TestInvalidQuoteIDIsRecordedAsExpectedDomainOutcome(t *testing.T) {
+	exporter := tracetest.NewInMemoryExporter()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+	otel.SetTracerProvider(provider)
+	defer provider.Shutdown(context.Background())
+
+	_, err := service.NewQuoteService(newFakeRepository()).GetQuoteByID(context.Background(), "not-a-uuid")
+	if !errors.Is(err, model.ErrInvalidQuoteID) {
+		t.Fatalf("GetQuoteByID() error = %v, want %v", err, model.ErrInvalidQuoteID)
+	}
+	spans := exporter.GetSpans()
+	if len(spans) != 1 || spans[0].Status.Code != 0 {
+		t.Fatalf("span status = %#v, want expected outcome without error status", spans)
+	}
+}
+
+func serviceSpanHasAttribute(attributes []attribute.KeyValue, key, value string) bool {
+	for _, attribute := range attributes {
+		if string(attribute.Key) == key && attribute.Value.AsString() == value {
+			return true
+		}
+	}
+	return false
 }

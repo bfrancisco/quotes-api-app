@@ -36,6 +36,7 @@ func newServer() http.Handler {
 	server := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
 		Resolvers: graphqltransport.NewResolver(quoteService),
 	}))
+	server.Use(graphqltransport.OperationTracing{})
 	server.SetErrorPresenter(graphqltransport.ErrorPresenter)
 	return otelhttp.NewHandler(telemetry.TraceIDHandler(server), "POST /graphql/query")
 }
@@ -141,21 +142,25 @@ func TestGraphQLRequestContinuesTraceAndReturnsTraceID(t *testing.T) {
 	}
 
 	spans := exporter.GetSpans()
-	if len(spans) != 1 {
-		t.Fatalf("exported span count = %d, want 1", len(spans))
+	if len(spans) != 2 {
+		t.Fatalf("exported span count = %d, want HTTP and operation spans for health", len(spans))
 	}
-	span := spans[0]
-	if span.Name != "POST /graphql/query" {
-		t.Fatalf("span name = %q, want stable operation endpoint name", span.Name)
+	serverSpan := findGraphQLSpan(t, spans, "POST /graphql/query")
+	operationSpan := findGraphQLSpan(t, spans, "graphql.query")
+	if serverSpan.Name != "POST /graphql/query" {
+		t.Fatalf("server span name = %q, want stable operation endpoint name", serverSpan.Name)
 	}
-	if span.Parent.TraceID() != parent.TraceID() || span.Parent.SpanID() != parent.SpanID() {
-		t.Fatalf("span parent = %v, want propagated remote parent %v", span.Parent, parent)
+	if serverSpan.Parent.TraceID() != parent.TraceID() || serverSpan.Parent.SpanID() != parent.SpanID() {
+		t.Fatalf("server span parent = %v, want propagated remote parent %v", serverSpan.Parent, parent)
 	}
-	if got, want := response.Header().Get(telemetry.TraceIDHeader), span.SpanContext.TraceID().String(); got != want {
+	if operationSpan.Name != "graphql.query" || operationSpan.Parent.SpanID() != serverSpan.SpanContext.SpanID() {
+		t.Fatalf("operation span = %#v, want graphql query child of HTTP span", operationSpan)
+	}
+	if got, want := response.Header().Get(telemetry.TraceIDHeader), serverSpan.SpanContext.TraceID().String(); got != want {
 		t.Fatalf("%s = %q, want %q", telemetry.TraceIDHeader, got, want)
 	}
-	if graphQLSpanHasAttributeValue(span.Attributes, `{ health { status } }`) {
-		t.Fatalf("span attributes = %v, must not include raw GraphQL query", span.Attributes)
+	if graphQLSpanHasAttributeValue(operationSpan.Attributes, `{ health { status } }`) {
+		t.Fatalf("operation span attributes = %v, must not include raw GraphQL query", operationSpan.Attributes)
 	}
 }
 
@@ -173,8 +178,8 @@ func TestGraphQLErrorResponseIncludesTraceID(t *testing.T) {
 	if got := response.Header().Get(telemetry.TraceIDHeader); got == "" {
 		t.Fatalf("%s is empty, want active trace ID", telemetry.TraceIDHeader)
 	}
-	if spans := exporter.GetSpans(); len(spans) != 1 {
-		t.Fatalf("exported span count = %d, want 1", len(spans))
+	if spans := exporter.GetSpans(); len(spans) != 3 {
+		t.Fatalf("exported span count = %d, want HTTP, operation, and service spans", len(spans))
 	}
 }
 
@@ -201,4 +206,15 @@ func graphQLSpanHasAttributeValue(attributes []attribute.KeyValue, value string)
 		}
 	}
 	return false
+}
+
+func findGraphQLSpan(t *testing.T, spans tracetest.SpanStubs, name string) tracetest.SpanStub {
+	t.Helper()
+	for _, span := range spans {
+		if span.Name == name {
+			return span
+		}
+	}
+	t.Fatalf("span %q not found in %v", name, spans)
+	return tracetest.SpanStub{}
 }
