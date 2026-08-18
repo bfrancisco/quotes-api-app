@@ -186,23 +186,32 @@ Do not add any of the following as span names, attributes, event attributes, sta
 - raw internal error messages or stack traces as manually created attributes;
 - collector authentication headers, API keys, or tokens.
 
-## 7. Planned storage spans — not yet implemented
+## 7. Firestore storage spans
 
-Before explicit Firestore spans are added, validate the Firestore emulator trace output to determine whether existing gRPC instrumentation already produces useful spans. Do not duplicate a useful automatic client span with an application span.
+**Owner:** Firestore repository adapter.
 
-If application-level Firestore spans are required, use only the following catalog entries:
+The Firestore Emulator validation confirmed that the Firestore Go client already emits useful automatic spans. Application-level `firestore.quote.*` spans are deliberately **not** emitted, because they would duplicate the same duration and failure data.
 
-| Planned span name | Repository method | Parent | Kind | Safe attributes | Notes |
+### Verified automatic create hierarchy
+
+```text
+quote.create or validation parent                         [INTERNAL]
+└── cloud.google.com/go/firestore.DocumentRef.Create      [INTERNAL]
+    └── cloud.google.com/go/firestore.Client.commit       [INTERNAL]
+```
+
+| Span name | Emitted for | Parent | Kind | Verified attributes | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `firestore.quote.create` | `CreateQuote()` | `quote.create` | `CLIENT` | `db.system=firestore`, collection name, operation `create` | Do not include document ID or quote values. |
-| `firestore.quote.list` | `ListQuotes()` | `quote.list` | `CLIENT` | `db.system=firestore`, collection name, operation `list` | Do not include ordering/query text. |
-| `firestore.quote.get` | `GetQuoteByID()` | `quote.get` | `CLIENT` | `db.system=firestore`, collection name, operation `get` | Do not include document ID. |
-| `firestore.quote.list_by_author` | `GetQuotesByAuthor()` | `quote.list` | `CLIENT` | `db.system=firestore`, collection name, operation `list_by_author` | Do not include author value. |
-| `firestore.quote.random_list` | `GetRandomQuote()` through `ListQuotes()` | `quote.random` | `CLIENT` | `db.system=firestore`, collection name, operation `list` | The random choice itself does not require a database span. |
-| `firestore.quote.update` | `UpdateQuote()` transaction | `quote.update` | `CLIENT` | `db.system=firestore`, collection name, operation `update` | One operation span covers retrying transaction work. |
-| `firestore.quote.delete` | `DeleteQuote()` transaction | `quote.delete` | `CLIENT` | `db.system=firestore`, collection name, operation `delete` | One operation span covers retrying transaction work. |
+| `cloud.google.com/go/firestore.DocumentRef.Create` | `CreateQuote()` | `quote.create` | `INTERNAL` | No custom quote data | Firestore-client span. |
+| `cloud.google.com/go/firestore.Client.commit` | Document creation commit | `DocumentRef.Create` | `INTERNAL` | No custom quote data | Firestore-client span. |
 
-When the storage implementation begins, update this document with the verified automatic gRPC span names and attributes. State explicitly whether an application-level Firestore span is emitted, suppressed, or replaced by an automatic span.
+The automatic spans are supplied by the Firestore client library and therefore have library-defined names, kinds, and attributes. This application does not modify their attributes or add quote values to them.
+
+### Future Firestore operations
+
+Before relying on automatic tracing for `get`, list, filtered list, transaction update, and transaction delete, extend the emulator validation test to record their actual hierarchy and attributes here. Do not add manual repository spans unless that validation proves an operation lacks useful automatic coverage.
+
+The emulator-backed `TestCreateQuoteEmitsAutomaticFirestoreSpansWithEmulator` is the regression guard for the create decision. It verifies the parent → `DocumentRef.Create` → `Client.commit` hierarchy, absence of quote content, and no duplicate manual storage span.
 
 ## 8. Deliberately absent spans
 
