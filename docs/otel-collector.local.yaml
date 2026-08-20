@@ -1,0 +1,23 @@
+# Local-only trace pipeline: API -> OTLP/HTTP -> Collector -> Jaeger.
+# The API runs on the host and exports to http://localhost:4318.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+
+exporters:
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/jaeger]

@@ -14,12 +14,14 @@ const (
 
 // Config contains the runtime settings supplied by local environment variables or Cloud Run.
 type Config struct {
-	Port                  string
-	StorageMode           string
-	FirestoreProjectID    string
-	FirestoreDatabaseID   string
-	FirestoreCollection   string
-	SeedQuotes            bool
+	Port        string
+	StorageMode string
+	SeedQuotes  bool
+
+	FirestoreProjectID  string
+	FirestoreDatabaseID string
+	FirestoreCollection string
+
 	TelemetryServiceName  string
 	TelemetryServiceVer   string
 	DeploymentEnvironment string

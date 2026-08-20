@@ -23,7 +23,7 @@ type Config struct {
 // ShutdownFunc flushes queued spans and closes the telemetry exporter.
 type ShutdownFunc func(context.Context) error
 
-// Setup configures global tracing. The OTLP/HTTP exporter reads its endpoint, authentication,
+// Setup configures global tracing. The OTLP/HTTP exporter reads its endpoint URL, authentication,
 // TLS, and timeout from the standard OTEL_EXPORTER_OTLP_* environment variables.
 func Setup(ctx context.Context, config Config) (ShutdownFunc, error) {
 	exporter, err := otlptracehttp.New(ctx)
