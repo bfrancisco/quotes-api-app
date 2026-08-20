@@ -22,7 +22,7 @@ A Go learning project that:
 - [x] Add Dockerfiles.
 - [x] Setup GCP products (Artifact Registry, Cloud Run, Firestore, Load Balancer)
 - [x] Deploy the APIs to GCP and test E2E flow.
-- [ ] Add OpenTelemetry instrumentation and Jaeger tracing for both API services.
+- [x] Add OpenTelemetry instrumentation and local Jaeger tracing for both API services.
 - [ ] Connect GraphQL to Apollo GraphOS / Apollo Studio.
 
 ## Project Goals
@@ -111,6 +111,8 @@ A quote is created with text and author. Updates use partial-update semantics:
 - `curl`, Postman, or another HTTP client.
 
 Docker, Firebase, and Apollo tooling are not required.
+
+For local trace inspection with Jaeger, see [the local Jaeger tracing guide](docs/jaeger-local-guide.md). The expected span contract is documented in [the telemetry span catalog](docs/telemetry-spans.md).
 
 ### Runtime Configuration
 

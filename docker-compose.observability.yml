@@ -1,0 +1,22 @@
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.67.0
+    ports:
+      - "127.0.0.1:16686:16686"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:16686/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.113.0
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./docs/otel-collector.local.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "127.0.0.1:4318:4318"
+    depends_on:
+      jaeger:
+        condition: service_healthy
